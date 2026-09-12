@@ -1,0 +1,6 @@
+{
+  "name": "Base",
+  "description": "A calm, 100% local finance app featuring perpetual rolling balance, transaction ledger, automated income engine, and flow analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

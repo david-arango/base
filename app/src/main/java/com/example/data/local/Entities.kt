@@ -1,0 +1,35 @@
+package com.example.data.local
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "transactions")
+data class TransactionEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val title: String,
+    val category: String,
+    val amount: Double,
+    val isExpense: Boolean,
+    val timestamp: Long,
+    val note: String = "",
+    val isAuto: Boolean = false,
+    val statusText: String = "Settled"
+)
+
+@Entity(tableName = "income_engine")
+data class IncomeEngineEntity(
+    @PrimaryKey
+    val id: Int = 1,
+    val expectedIncome: Double = 2100.0,
+    val cadence: String = "Bi-Weekly",
+    val nextPaydayTimestamp: Long = System.currentTimeMillis() + (3L * 24 * 60 * 60 * 1000),
+    val isActive: Boolean = true
+)
+
+@Entity(tableName = "app_preferences")
+data class AppPreferenceEntity(
+    @PrimaryKey
+    val key: String,
+    val value: String
+)
