@@ -52,46 +52,51 @@ private val CalmLightColorScheme =
 
 private val CalmDarkColorScheme =
   darkColorScheme(
-    primary = CalmInversePrimary,
-    onPrimary = CalmPrimary,
-    primaryContainer = CalmPrimaryContainer,
-    onPrimaryContainer = CalmOnPrimaryContainer,
-    secondary = CalmSecondaryContainer,
-    onSecondary = CalmOnSecondaryContainer,
-    secondaryContainer = CalmSecondary,
-    onSecondaryContainer = CalmOnSecondary,
-    background = CalmInverseSurface,
-    onBackground = CalmInverseOnSurface,
-    surface = CalmInverseSurface,
-    onSurface = CalmInverseOnSurface,
-    surfaceVariant = CalmPrimaryContainer,
-    onSurfaceVariant = CalmOutlineVariant,
-    surfaceContainerLowest = Color(0xFF1E201F),
-    surfaceContainerLow = Color(0xFF252827),
-    surfaceContainer = Color(0xFF2C302E),
-    surfaceContainerHigh = Color(0xFF353A37),
-    surfaceContainerHighest = Color(0xFF3F4441),
-    outline = CalmOutline,
-    outlineVariant = CalmOutlineVariant
+    primary = Color(0xFFC3E9C5),
+    onPrimary = Color(0xFF0F3816),
+    primaryContainer = Color(0xFF282D2B),
+    onPrimaryContainer = Color(0xFFE2E6E4),
+    inversePrimary = CalmPrimary,
+    secondary = Color(0xFF98D49E),
+    onSecondary = Color(0xFF0D3815),
+    secondaryContainer = Color(0xFF234428),
+    onSecondaryContainer = Color(0xFFC3E9C5),
+    tertiary = Color(0xFFF0B8AE),
+    onTertiary = Color(0xFF522119),
+    tertiaryContainer = Color(0xFF522119),
+    onTertiaryContainer = Color(0xFFF0B8AE),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    background = Color(0xFF141716),
+    onBackground = Color(0xFFE2E6E4),
+    surface = Color(0xFF181C1B),
+    onSurface = Color(0xFFE2E6E4),
+    surfaceVariant = Color(0xFF262A29),
+    onSurfaceVariant = Color(0xFFB8BCBA),
+    surfaceContainerLowest = Color(0xFF121514),
+    surfaceContainerLow = Color(0xFF1A1D1C),
+    surfaceContainer = Color(0xFF222624),
+    surfaceContainerHigh = Color(0xFF2B2F2D),
+    surfaceContainerHighest = Color(0xFF353A38),
+    surfaceDim = Color(0xFF121514),
+    surfaceBright = Color(0xFF3C413F),
+    outline = Color(0xFF8A908D),
+    outlineVariant = Color(0xFF434846),
+    inverseSurface = CalmSurface,
+    inverseOnSurface = CalmOnSurface,
+    surfaceTint = Color(0xFF98D49E)
   )
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-  // For Base, we preserve the distinctive Calm Organic palette
+  darkTheme: Boolean = false,
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
-  val colorScheme =
-    when {
-      dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-        val context = LocalContext.current
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-      }
-
-      darkTheme -> CalmDarkColorScheme
-      else -> CalmLightColorScheme
-    }
+  // App is light mode only per user design specification
+  val colorScheme = CalmLightColorScheme
 
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }

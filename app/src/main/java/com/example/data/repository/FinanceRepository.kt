@@ -3,9 +3,11 @@ package com.example.data.repository
 import android.content.Context
 import com.example.data.local.AppDatabase
 import com.example.data.local.AppPreferenceEntity
+import com.example.data.local.CategoryEntity
 import com.example.data.local.FinanceDao
 import com.example.data.local.IncomeEngineEntity
 import com.example.data.local.TransactionEntity
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -18,10 +20,12 @@ import java.util.Locale
 
 class FinanceRepository(
     private val context: Context,
-    private val dao: FinanceDao
+    private val dao: FinanceDao,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     val allTransactions: Flow<List<TransactionEntity>> = dao.getAllTransactions()
     val incomeEngineConfig: Flow<IncomeEngineEntity?> = dao.getIncomeEngineConfig()
+    val allCategories: Flow<List<CategoryEntity>> = dao.getAllCategories()
 
     val startingBalanceOffset: Flow<Double> = dao.getPreferenceFlow("starting_balance_offset").map {
         it?.toDoubleOrNull() ?: 0.0
@@ -43,18 +47,59 @@ class FinanceRepository(
         dao.setPreference(AppPreferenceEntity("starting_balance_offset", offset.toString()))
     }
 
+    suspend fun insertCategory(category: CategoryEntity): Long {
+        return withContext(ioDispatcher) {
+            dao.insertCategory(category)
+        }
+    }
+
+    suspend fun updateCategory(category: CategoryEntity, oldName: String = "") {
+        withContext(ioDispatcher) {
+            dao.updateCategory(category)
+            if (oldName.isNotBlank() && oldName != category.name) {
+                dao.updateCategoryInTransactions(oldName, category.name)
+            }
+        }
+    }
+
+    suspend fun deleteCategory(id: Long, categoryName: String) {
+        withContext(ioDispatcher) {
+            dao.deleteCategoryById(id)
+            dao.reassignCategoryInTransactions(categoryName)
+        }
+    }
+
+    suspend fun seedDefaultCategoriesIfEmpty() {
+        withContext(ioDispatcher) {
+            val existing = dao.getAllCategoriesList()
+            if (existing.isEmpty()) {
+                val defaults = listOf(
+                    CategoryEntity(name = "Groceries", iconKey = "local_grocery_store", colorHex = 0xFF5B604BL),
+                    CategoryEntity(name = "Dining Out", iconKey = "restaurant", colorHex = 0xFF8C4A42L),
+                    CategoryEntity(name = "Bills & Utilities", iconKey = "receipt", colorHex = 0xFF4E6354L),
+                    CategoryEntity(name = "Transport", iconKey = "directions_subway", colorHex = 0xFF8F4C38L),
+                    CategoryEntity(name = "Shopping", iconKey = "shopping_bag", colorHex = 0xFF747968L),
+                    CategoryEntity(name = "Health", iconKey = "spa", colorHex = 0xFF3D6955L),
+                    CategoryEntity(name = "Entertainment", iconKey = "movie", colorHex = 0xFF8B6F5FL)
+                )
+                dao.insertCategories(defaults)
+            }
+        }
+    }
+
     suspend fun checkAndSeedInitialData() {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val seeded = dao.getPreference("has_seeded_initial_data")
             if (seeded != "true") {
                 seedRealisticInitialData()
                 dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
             }
+            seedDefaultCategoriesIfEmpty()
         }
     }
 
     suspend fun resetAllData() {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             dao.clearAllTransactions()
             dao.setPreference(AppPreferenceEntity("starting_balance_offset", "0.0"))
             dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
@@ -62,10 +107,11 @@ class FinanceRepository(
     }
 
     suspend fun restoreDemoData() {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             dao.clearAllTransactions()
             dao.setPreference(AppPreferenceEntity("starting_balance_offset", "0.0"))
             seedRealisticInitialData()
+            seedDefaultCategoriesIfEmpty()
             dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
         }
     }
@@ -315,8 +361,8 @@ class FinanceRepository(
         return if (dbFile.exists()) dbFile.length() else 142 * 1024L
     }
 
-    suspend fun generateCsvData(): String = withContext(Dispatchers.IO) {
-        val transactions = dao.getAllTransactions().firstOrNull() ?: emptyList()
+    suspend fun generateCsvData(): String = withContext(ioDispatcher) {
+        val transactions = dao.getAllTransactionsList()
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         val sb = StringBuilder()
         sb.append("ID,Date,Title,Category,Type,Amount,Note,Status\n")

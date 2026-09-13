@@ -47,7 +47,7 @@ fun AppHeader(
     }
 
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -83,7 +83,7 @@ fun AppHeader(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(9999.dp))
-                            .background(CalmSurfaceContainer)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -92,12 +92,12 @@ fun AppHeader(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(CalmPositiveDeep)
+                                .background(MaterialTheme.colorScheme.primary)
                         )
                         Text(
                             text = "100% Local",
                             style = MaterialTheme.typography.labelSmall,
-                            color = CalmSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -110,7 +110,7 @@ fun AppHeader(
                     Text(
                         text = screenTitle,
                         style = MaterialTheme.typography.labelLarge,
-                        color = CalmTextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Box(

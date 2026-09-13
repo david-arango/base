@@ -64,6 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.CategoryItem
 import com.example.data.model.DefaultCategories
 import com.example.ui.theme.CalmDividerHairline
 import com.example.ui.theme.CalmNegativeDeep
@@ -86,6 +87,7 @@ import java.util.Locale
 @Composable
 fun NewTransactionSheet(
     isOpen: Boolean,
+    categories: List<CategoryItem> = DefaultCategories.list,
     onDismiss: () -> Unit,
     onSave: (title: String, category: String, amount: Double, isExpense: Boolean, note: String) -> Unit
 ) {
@@ -94,9 +96,9 @@ fun NewTransactionSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var isExpense by remember { mutableStateOf(true) }
-    var rawAmount by remember { mutableStateOf("42.50") }
-    var selectedCategory by remember { mutableStateOf("Groceries") }
-    var noteText by remember { mutableStateOf("Weekly farmer's market") }
+    var rawAmount by remember { mutableStateOf("") }
+    var selectedCategory by remember(categories) { mutableStateOf(categories.firstOrNull()?.name ?: "Groceries") }
+    var noteText by remember { mutableStateOf("") }
 
     val formattedDate = remember {
         val sdf = SimpleDateFormat("MMM d", Locale.US)
@@ -225,7 +227,7 @@ fun NewTransactionSheet(
 
             HorizontalDivider(
                 thickness = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.outlineVariant
             )
 
             // Body
@@ -329,7 +331,7 @@ fun NewTransactionSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DefaultCategories.list.forEach { category ->
+                    categories.forEach { category ->
                         val isSelected = selectedCategory == category.name
                         Row(
                             modifier = Modifier
@@ -394,7 +396,7 @@ fun NewTransactionSheet(
                             Text(
                                 "Add a note (optional)...",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         colors = TextFieldDefaults.colors(
@@ -431,15 +433,17 @@ fun NewTransactionSheet(
                 val amountStr = String.format(Locale.US, "%.2f", parsedAmount)
                 Button(
                     onClick = {
-                        val finalAmount = if (parsedAmount > 0) parsedAmount else 42.50
-                        onSave(
-                            noteText.ifBlank { selectedCategory },
-                            selectedCategory,
-                            finalAmount,
-                            isExpense,
-                            noteText
-                        )
+                        if (parsedAmount > 0) {
+                            onSave(
+                                noteText.ifBlank { selectedCategory },
+                                selectedCategory,
+                                parsedAmount,
+                                isExpense,
+                                noteText
+                            )
+                        }
                     },
+                    enabled = parsedAmount > 0.0,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -458,7 +462,11 @@ fun NewTransactionSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Save Transaction (${if (isExpense) "-" else "+"}$$amountStr)",
+                        text = if (parsedAmount > 0.0) {
+                            "Save Transaction (${if (isExpense) "-" else "+"}$$amountStr)"
+                        } else {
+                            "Save Transaction"
+                        },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                     )
                 }

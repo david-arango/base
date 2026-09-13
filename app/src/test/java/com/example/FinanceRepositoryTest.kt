@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.local.AppDatabase
+import com.example.data.local.CategoryEntity
 import com.example.data.local.FinanceDao
+import com.example.data.local.IncomeEngineEntity
 import com.example.data.local.TransactionEntity
 import com.example.data.repository.FinanceRepository
 import kotlinx.coroutines.flow.first
@@ -27,10 +29,11 @@ class FinanceRepositoryTest {
     private lateinit var db: AppDatabase
     private lateinit var dao: FinanceDao
     private lateinit var repository: FinanceRepository
+    private lateinit var context: Context
 
     @Before
     fun setup() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
@@ -42,6 +45,49 @@ class FinanceRepositoryTest {
     @Throws(IOException::class)
     fun teardown() {
         db.close()
+    }
+
+    @Test
+    fun insertAndDeleteTransaction() = runBlocking {
+        val tx = TransactionEntity(
+            id = 0,
+            title = "Matcha Latte",
+            category = "Dining Out",
+            amount = 6.75,
+            isExpense = true,
+            timestamp = System.currentTimeMillis(),
+            note = "Oat milk",
+            statusText = "Settled"
+        )
+        val insertedId = repository.insertTransaction(tx)
+        assertTrue(insertedId > 0)
+
+        val txsAfterInsert = repository.allTransactions.first()
+        assertEquals(1, txsAfterInsert.size)
+        assertEquals("Matcha Latte", txsAfterInsert[0].title)
+
+        repository.deleteTransaction(insertedId)
+        val txsAfterDelete = repository.allTransactions.first()
+        assertTrue(txsAfterDelete.isEmpty())
+    }
+
+    @Test
+    fun updateIncomeEngine_persistsConfiguration() = runBlocking {
+        val config = IncomeEngineEntity(
+            id = 1,
+            expectedIncome = 3500.0,
+            cadence = "Semi-Monthly",
+            nextPaydayTimestamp = 1800000000L,
+            isActive = true
+        )
+        repository.updateIncomeEngine(config)
+
+        val stored = repository.incomeEngineConfig.first()
+        assertNotNull(stored)
+        assertEquals(3500.0, stored!!.expectedIncome, 0.001)
+        assertEquals("Semi-Monthly", stored.cadence)
+        assertEquals(1800000000L, stored.nextPaydayTimestamp)
+        assertTrue(stored.isActive)
     }
 
     @Test
@@ -65,7 +111,7 @@ class FinanceRepositoryTest {
 
     @Test
     fun generateCsvData_containsHeaderAndTransactions() = runBlocking {
-        dao.insertTransaction(
+        repository.insertTransaction(
             TransactionEntity(
                 id = 1,
                 title = "Coffee, Dark Roast",
@@ -116,5 +162,41 @@ class FinanceRepositoryTest {
         repository.restoreDemoData()
         val txs = repository.allTransactions.first()
         assertTrue(txs.isNotEmpty())
+    }
+
+    @Test
+    fun getDatabaseSizeBytes_returnsNonNegativeValue() {
+        val size = repository.getDatabaseSizeBytes()
+        assertTrue("Database size should be non-negative", size >= 0)
+    }
+
+    @Test
+    fun category_repositorySeedAndCrud() = runBlocking {
+        // Seed default categories
+        repository.seedDefaultCategoriesIfEmpty()
+        val seeded = repository.allCategories.first()
+        assertEquals(7, seeded.size)
+
+        // Insert new custom category
+        val newCat = CategoryEntity(name = "Investments", iconKey = "work", colorHex = 0xFF445566L)
+        val insertedId = repository.insertCategory(newCat)
+        assertTrue(insertedId > 0)
+
+        val withNew = repository.allCategories.first()
+        assertEquals(8, withNew.size)
+
+        // Update custom category
+        repository.updateCategory(
+            CategoryEntity(id = insertedId, name = "Crypto & Stocks", iconKey = "bolt", colorHex = 0xFF112233L),
+            oldName = "Investments"
+        )
+        val withUpdated = repository.allCategories.first()
+        assertTrue(withUpdated.any { it.name == "Crypto & Stocks" })
+
+        // Delete custom category
+        repository.deleteCategory(insertedId, "Crypto & Stocks")
+        val afterDelete = repository.allCategories.first()
+        assertEquals(7, afterDelete.size)
+        assertTrue(afterDelete.none { it.name == "Crypto & Stocks" })
     }
 }

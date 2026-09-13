@@ -87,7 +87,7 @@ fun AppBottomNavigation(
     )
 
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -98,7 +98,7 @@ fun AppBottomNavigation(
         ) {
             HorizontalDivider(
                 thickness = 0.5.dp,
-                color = CalmDividerHairline.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.outlineVariant
             )
 
             Row(
@@ -114,13 +114,13 @@ fun AppBottomNavigation(
                     val interactionSource = remember { MutableInteractionSource() }
 
                     val pillColor by animateColorAsState(
-                        targetValue = if (isSelected) CalmSecondaryContainer else Color.Transparent,
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
                         animationSpec = tween(durationMillis = 200),
                         label = "pill_color"
                     )
 
                     val contentColor by animateColorAsState(
-                        targetValue = if (isSelected) CalmOnSecondaryContainer else CalmOnSurfaceVariant,
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                         animationSpec = tween(durationMillis = 200),
                         label = "content_color"
                     )

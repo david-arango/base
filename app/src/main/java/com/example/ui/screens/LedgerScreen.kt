@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.TransactionEntity
+import com.example.data.model.CategoryItem
 import com.example.data.model.DefaultCategories
 import com.example.ui.FinanceUiState
 import com.example.ui.theme.CalmDividerHairline
@@ -128,7 +129,7 @@ fun LedgerScreen(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(9999.dp))
-                            .background(CalmSurfaceContainer)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -152,7 +153,7 @@ fun LedgerScreen(
             if (uiState.transactions.isEmpty()) {
                 item {
                     Surface(
-                        color = CalmSurfaceContainer,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -169,13 +170,13 @@ fun LedgerScreen(
                                 modifier = Modifier
                                     .size(56.dp)
                                     .clip(CircleShape)
-                                    .background(CalmSurfaceContainerLowest),
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.Spa,
                                     contentDescription = null,
-                                    tint = CalmPositiveDeep,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
@@ -210,12 +211,12 @@ fun LedgerScreen(
                                 fontWeight = FontWeight.SemiBold,
                                 letterSpacing = 1.sp
                             ),
-                            color = CalmTextMuted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 2.dp, top = 4.dp)
                         )
 
                         Surface(
-                            color = CalmSurfaceContainer,
+                            color = MaterialTheme.colorScheme.surfaceContainer,
                             shape = RoundedCornerShape(20.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -223,12 +224,13 @@ fun LedgerScreen(
                                 transactionsInGroup.forEachIndexed { index, tx ->
                                     TransactionItemRow(
                                         transaction = tx,
+                                        categories = uiState.categories,
                                         onDelete = { onDeleteTransaction(tx.id) }
                                     )
                                     if (index < transactionsInGroup.lastIndex) {
                                         HorizontalDivider(
                                             thickness = 0.5.dp,
-                                            color = CalmDividerHairline.copy(alpha = 0.6f),
+                                            color = MaterialTheme.colorScheme.outlineVariant,
                                             modifier = Modifier.padding(horizontal = 16.dp)
                                         )
                                     }
@@ -251,7 +253,7 @@ fun LedgerScreen(
                     Icon(
                         imageVector = Icons.Filled.Spa,
                         contentDescription = null,
-                        tint = CalmPositiveDeep,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -260,7 +262,7 @@ fun LedgerScreen(
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontStyle = FontStyle.Italic
                         ),
-                        color = CalmTextMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
@@ -303,7 +305,7 @@ fun LedgerScreen(
 @Composable
 fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
     Surface(
-        color = CalmSurfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(24.dp),
         shadowElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
@@ -331,20 +333,27 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
                         letterSpacing = 1.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = CalmTextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(modifier = Modifier.height(6.dp))
 
+            val balanceColor = if (uiState.rollingBalance < 0) CalmNegativeDeep else CalmPositiveDeep
+            val formattedBalance = if (uiState.rollingBalance < 0) {
+                "-$${String.format(Locale.US, "%,.2f", -uiState.rollingBalance)}"
+            } else {
+                String.format(Locale.US, "$%,.2f", uiState.rollingBalance)
+            }
+
             // Hero Amount Display
             Text(
-                text = String.format(Locale.US, "$%,.2f", uiState.rollingBalance),
+                text = formattedBalance,
                 style = MaterialTheme.typography.displayMedium.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-1).sp
                 ),
-                color = CalmPositiveDeep,
+                color = balanceColor,
                 modifier = Modifier.testTag("hero_balance_display")
             )
 
@@ -357,7 +366,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
                 Icon(
                     imageVector = Icons.Filled.CalendarToday,
                     contentDescription = null,
-                    tint = CalmTextMuted,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
@@ -376,7 +385,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
             ) {
                 // Period In
                 Surface(
-                    color = CalmSurfaceContainerLowest.copy(alpha = 0.85f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f)
                 ) {
@@ -389,7 +398,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(CircleShape)
-                                .background(CalmSecondaryContainer),
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -403,7 +412,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
                             Text(
                                 text = "PERIOD IN",
                                 style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.6.sp),
-                                color = CalmTextMuted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = String.format(Locale.US, "+$%,.2f", uiState.periodIn),
@@ -418,7 +427,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
 
                 // Period Out
                 Surface(
-                    color = CalmSurfaceContainerLowest.copy(alpha = 0.85f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f)
                 ) {
@@ -431,7 +440,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(CircleShape)
-                                .background(CalmErrorContainer.copy(alpha = 0.6f)),
+                                .background(CalmErrorContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -445,7 +454,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
                             Text(
                                 text = "PERIOD OUT",
                                 style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.6.sp),
-                                color = CalmTextMuted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = String.format(Locale.US, "-$%,.2f", uiState.periodOut),
@@ -465,10 +474,11 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
 @Composable
 fun TransactionItemRow(
     transaction: TransactionEntity,
+    categories: List<CategoryItem> = emptyList(),
     onDelete: () -> Unit
 ) {
-    val category = remember(transaction.category) {
-        DefaultCategories.getCategoryByName(transaction.category)
+    val category = remember(transaction.category, categories) {
+        DefaultCategories.getCategoryByName(transaction.category, categories)
     }
 
     val timeFormatted = remember(transaction.timestamp) {
@@ -497,13 +507,13 @@ fun TransactionItemRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(if (isIncomeHighlight) CalmSecondaryContainer else CalmSurfaceContainerHighest),
+                    .background(if (isIncomeHighlight) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = category.icon,
                     contentDescription = null,
-                    tint = if (isIncomeHighlight) CalmPositiveDeep else MaterialTheme.colorScheme.primary,
+                    tint = if (isIncomeHighlight) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -518,7 +528,7 @@ fun TransactionItemRow(
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = if (isIncomeHighlight) FontWeight.SemiBold else FontWeight.Medium
                         ),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -547,7 +557,7 @@ fun TransactionItemRow(
                 Text(
                     text = subtext,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CalmTextMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -570,7 +580,7 @@ fun TransactionItemRow(
             Text(
                 text = transaction.statusText,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isIncomeHighlight) CalmPositiveDeep.copy(alpha = 0.8f) else CalmTextMuted
+                color = if (isIncomeHighlight) CalmPositiveDeep else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

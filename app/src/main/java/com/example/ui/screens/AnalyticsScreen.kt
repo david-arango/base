@@ -94,7 +94,7 @@ fun AnalyticsScreen(
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 1.sp
                         ),
-                        color = CalmTextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "Analytics & Flow",
@@ -102,7 +102,7 @@ fun AnalyticsScreen(
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = (-0.5).sp
                         ),
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -110,7 +110,7 @@ fun AnalyticsScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(CalmSurfaceContainer)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .clickable { isInfoBannerVisible = !isInfoBannerVisible }
                         .testTag("toggle_info_banner_btn"),
                     contentAlignment = Alignment.Center
@@ -133,7 +133,7 @@ fun AnalyticsScreen(
                 exit = fadeOut()
             ) {
                 Surface(
-                    color = CalmSurfaceContainerHigh,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -145,14 +145,14 @@ fun AnalyticsScreen(
                         Icon(
                             imageVector = Icons.Filled.Spa,
                             contentDescription = null,
-                            tint = CalmSecondary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Non-Judgmental Tracking",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Cash flow rolls smoothly with no artificial month-end cliff. Stay aware of your daily pace without arbitrary restrictions.",
@@ -168,7 +168,7 @@ fun AnalyticsScreen(
                             Icon(
                                 imageVector = Icons.Filled.Close,
                                 contentDescription = "Close",
-                                tint = CalmTextMuted,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -180,7 +180,7 @@ fun AnalyticsScreen(
         // Segment Toggle Pill (Material 3 Calm Style)
         item {
             Surface(
-                color = CalmSurfaceContainer,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(9999.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -194,7 +194,7 @@ fun AnalyticsScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(9999.dp))
-                            .background(if (isCurrent) CalmPrimary else Color.Transparent)
+                            .background(if (isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent)
                             .clickable { onPeriodChange(AnalyticsPeriod.CURRENT_PAYCHECK) }
                             .padding(vertical = 10.dp)
                             .testTag("tab_current_paycheck"),
@@ -205,7 +205,7 @@ fun AnalyticsScreen(
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontWeight = FontWeight.Medium
                             ),
-                            color = if (isCurrent) CalmOnPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -214,7 +214,7 @@ fun AnalyticsScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(9999.dp))
-                            .background(if (!isCurrent) CalmPrimary else Color.Transparent)
+                            .background(if (!isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent)
                             .clickable { onPeriodChange(AnalyticsPeriod.LAST_30_DAYS) }
                             .padding(vertical = 10.dp)
                             .testTag("tab_last_30_days"),
@@ -225,7 +225,7 @@ fun AnalyticsScreen(
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontWeight = FontWeight.Medium
                             ),
-                            color = if (!isCurrent) CalmOnPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (!isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -257,12 +257,12 @@ fun AnalyticsScreen(
                         letterSpacing = 1.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = CalmTextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = "By expenditure",
                     style = MaterialTheme.typography.labelSmall,
-                    color = CalmTextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -270,7 +270,7 @@ fun AnalyticsScreen(
         // Ranked Breakdown Items
         item {
             Surface(
-                color = CalmSurfaceContainer,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -315,14 +315,14 @@ fun AnalyticsScreen(
                 Icon(
                     imageVector = Icons.Filled.Lock,
                     contentDescription = null,
-                    tint = CalmTextMuted,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Calculated completely on-device • zero third-party sync",
                     style = MaterialTheme.typography.labelSmall,
-                    color = CalmTextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -332,7 +332,7 @@ fun AnalyticsScreen(
 @Composable
 fun PeriodSummaryCard(uiState: FinanceUiState) {
     Surface(
-        color = CalmSurfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -355,7 +355,7 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
                     Icon(
                         imageVector = Icons.Filled.CalendarToday,
                         contentDescription = null,
-                        tint = CalmSecondary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
@@ -368,7 +368,7 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(9999.dp))
-                        .background(CalmSecondaryContainer)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     val badgeText = if (uiState.currentPeriod == AnalyticsPeriod.CURRENT_PAYCHECK) {
@@ -379,7 +379,7 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
                     Text(
                         text = badgeText,
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                        color = CalmOnSecondaryContainer
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             }
@@ -394,7 +394,7 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
                     Text(
                         text = "TOTAL SPENT",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
-                        color = CalmTextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = String.format(Locale.US, "$%,.2f", uiState.periodOut),
@@ -402,16 +402,16 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.8).sp
                         ),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag("analytics_total_spent")
                     )
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "EXPECTED IN",
+                        text = "TOTAL IN",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
-                        color = CalmTextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = String.format(Locale.US, "$%,.2f", uiState.periodIn),
@@ -428,14 +428,14 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
                         .fillMaxWidth()
                         .height(10.dp)
                         .clip(RoundedCornerShape(9999.dp))
-                        .background(CalmSurfaceContainerHigh)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(uiState.burnProgress.coerceIn(0.01f, 1f))
                             .height(10.dp)
                             .clip(RoundedCornerShape(9999.dp))
-                            .background(CalmSecondary)
+                            .background(MaterialTheme.colorScheme.primary)
                     )
                 }
 
@@ -444,23 +444,28 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     val pct = (uiState.burnProgress * 100).toInt()
-                    val remaining = (uiState.periodIn - uiState.periodOut).coerceAtLeast(0.0)
+                    val net = uiState.periodIn - uiState.periodOut
+                    val netText = if (net >= 0) {
+                        String.format(Locale.US, "$%,.2f remaining", net)
+                    } else {
+                        String.format(Locale.US, "-$%,.2f deficit", -net)
+                    }
                     Text(
                         text = "$pct% committed",
                         style = MaterialTheme.typography.labelSmall,
-                        color = CalmTextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = String.format(Locale.US, "$%,.2f remaining", remaining),
+                        text = netText,
                         style = MaterialTheme.typography.labelSmall,
-                        color = CalmTextMuted
+                        color = if (net >= 0) MaterialTheme.colorScheme.onSurfaceVariant else CalmNegativeDeep
                     )
                 }
             }
 
             // Calming Pace Indicator Note
             Surface(
-                color = CalmSurfaceContainerLow,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -473,13 +478,13 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
                         modifier = Modifier
                             .size(28.dp)
                             .clip(CircleShape)
-                            .background(CalmSecondaryContainer),
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.WaterDrop,
                             contentDescription = null,
-                            tint = CalmOnSecondaryContainer,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -497,7 +502,7 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
 @Composable
 fun ExpenseFlowCard(breakdown: List<CategorySpend>) {
     Surface(
-        color = CalmSurfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -515,12 +520,12 @@ fun ExpenseFlowCard(breakdown: List<CategorySpend>) {
                 Text(
                     text = "Expense Flow",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${breakdown.size} Categories",
                     style = MaterialTheme.typography.labelSmall,
-                    color = CalmTextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -530,7 +535,7 @@ fun ExpenseFlowCard(breakdown: List<CategorySpend>) {
                     .fillMaxWidth()
                     .height(14.dp)
                     .clip(RoundedCornerShape(9999.dp))
-                    .background(CalmSurfaceContainerHigh)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     breakdown.forEach { item ->
@@ -582,7 +587,7 @@ fun RankedCategoryItemCard(
     item: CategorySpend
 ) {
     Surface(
-        color = CalmSurfaceContainerLowest,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(14.dp),
         shadowElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
@@ -621,13 +626,13 @@ fun RankedCategoryItemCard(
                         Text(
                             text = "$rank. ${item.category.name}",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         val pct = (item.percentageOfSpend * 100).toInt()
                         Text(
                             text = "$pct% of spend • ${item.transactionCount} transactions",
                             style = MaterialTheme.typography.labelSmall,
-                            color = CalmTextMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -641,7 +646,7 @@ fun RankedCategoryItemCard(
                     Text(
                         text = String.format(Locale.US, "Avg $%,.2f", item.averageAmount),
                         style = MaterialTheme.typography.labelSmall,
-                        color = CalmTextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -652,7 +657,7 @@ fun RankedCategoryItemCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(9999.dp))
-                    .background(CalmSurfaceContainerHigh)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             ) {
                 Box(
                     modifier = Modifier

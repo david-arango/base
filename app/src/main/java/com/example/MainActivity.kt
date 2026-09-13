@@ -2,6 +2,7 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
@@ -52,7 +53,16 @@ import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
+        )
         setContent {
             MyApplicationTheme {
                 BaseApp()
@@ -169,6 +179,7 @@ fun BaseApp(
         // Modal Sheets and Dialogs
         NewTransactionSheet(
             isOpen = isNewTxOpen,
+            categories = uiState.categories,
             onDismiss = { viewModel.closeNewTransactionSheet() },
             onSave = { title, category, amount, isExpense, note ->
                 viewModel.addTransaction(title, category, amount, isExpense, note)
@@ -186,7 +197,17 @@ fun BaseApp(
 
         CategoryManagerSheet(
             isOpen = isCategoryManagerOpen,
-            onDismiss = { viewModel.closeCategoryManager() }
+            categories = uiState.categories,
+            onDismiss = { viewModel.closeCategoryManager() },
+            onCreateCategory = { name, iconKey, colorHex ->
+                viewModel.createCategory(name, iconKey, colorHex)
+            },
+            onUpdateCategory = { id, name, iconKey, colorHex, oldName ->
+                viewModel.updateCategory(id, name, iconKey, colorHex, oldName)
+            },
+            onDeleteCategory = { id, name ->
+                viewModel.deleteCategory(id, name)
+            }
         )
 
         StartingBalanceDialog(

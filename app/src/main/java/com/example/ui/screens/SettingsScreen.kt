@@ -115,7 +115,7 @@ fun SettingsScreen(
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 1.sp
                         ),
-                        color = CalmTextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "Settings",
@@ -123,7 +123,7 @@ fun SettingsScreen(
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = (-0.5).sp
                         ),
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -131,13 +131,13 @@ fun SettingsScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(CalmSurfaceContainer),
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Security,
                         contentDescription = null,
-                        tint = CalmSecondary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -147,7 +147,7 @@ fun SettingsScreen(
         // 100% Local & Private Status Card
         item {
             Surface(
-                color = CalmSecondaryContainer.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -160,13 +160,13 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(CalmSecondaryContainer),
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Lock,
                             contentDescription = null,
-                            tint = CalmPositiveDeep,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -179,7 +179,7 @@ fun SettingsScreen(
                             Text(
                                 text = "Zero-Cloud Architecture",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -194,13 +194,13 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .padding(top = 4.dp)
                                 .clip(RoundedCornerShape(9999.dp))
-                                .background(CalmSurfaceContainerLowest)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = "Storage used: ~$dbKb KB (SQLite Room)",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CalmPositiveDeep
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -217,12 +217,12 @@ fun SettingsScreen(
                         letterSpacing = 1.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = CalmTextMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 2.dp)
                 )
 
                 Surface(
-                    color = CalmSurfaceContainer,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -243,13 +243,13 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(CalmSecondaryContainer),
+                                    .background(MaterialTheme.colorScheme.secondaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.WaterDrop,
                                     contentDescription = null,
-                                    tint = CalmPositiveDeep,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -258,12 +258,12 @@ fun SettingsScreen(
                                 Text(
                                     text = "${uiState.incomeEngine.cadence} Paycheck: $${String.format(Locale.US, "%,.2f", uiState.incomeEngine.expectedIncome)}",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Next posting: $nextPaydayFormatted (Automatic)",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = CalmTextMuted
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -271,7 +271,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                             contentDescription = "Edit Income Engine",
-                            tint = CalmTextMuted,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -288,12 +288,12 @@ fun SettingsScreen(
                         letterSpacing = 1.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = CalmTextMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 2.dp)
                 )
 
                 Surface(
-                    color = CalmSurfaceContainer,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -316,7 +316,7 @@ fun SettingsScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape)
-                                        .background(CalmSurfaceContainerHigh),
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -330,12 +330,12 @@ fun SettingsScreen(
                                     Text(
                                         text = "Starting Balance Offset",
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = String.format(Locale.US, "Current: $%,.2f", uiState.startingBalanceOffset),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = CalmTextMuted
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -343,14 +343,14 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                                 contentDescription = null,
-                                tint = CalmTextMuted,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
 
                         HorizontalDivider(
                             thickness = 0.5.dp,
-                            color = CalmDividerHairline.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.outlineVariant,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
 
@@ -372,7 +372,7 @@ fun SettingsScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape)
-                                        .background(CalmSurfaceContainerHigh),
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -386,14 +386,14 @@ fun SettingsScreen(
                                     Text(
                                         text = "Manage Categories",
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     // Mini preview dots
                                     Row(
                                         modifier = Modifier.padding(top = 4.dp),
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        DefaultCategories.list.take(5).forEach { cat ->
+                                        uiState.categories.take(5).forEach { cat ->
                                             Box(
                                                 modifier = Modifier
                                                     .size(8.dp)
@@ -402,9 +402,9 @@ fun SettingsScreen(
                                             )
                                         }
                                         Text(
-                                            text = "7 Active",
+                                            text = "${uiState.categories.size} Active",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = CalmTextMuted,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(start = 4.dp)
                                         )
                                     }
@@ -414,7 +414,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                                 contentDescription = null,
-                                tint = CalmTextMuted,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -432,12 +432,12 @@ fun SettingsScreen(
                         letterSpacing = 1.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = CalmTextMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 2.dp)
                 )
 
                 Surface(
-                    color = CalmSurfaceContainer,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -460,7 +460,7 @@ fun SettingsScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape)
-                                        .background(CalmSurfaceContainerHigh),
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -474,12 +474,12 @@ fun SettingsScreen(
                                     Text(
                                         text = "Export Ledger to CSV",
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = "Shareable spreadsheet file",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = CalmTextMuted
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -487,7 +487,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                                 contentDescription = null,
-                                tint = CalmTextMuted,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -499,7 +499,7 @@ fun SettingsScreen(
         // Section: ABOUT BASE
         item {
             Surface(
-                color = CalmSurfaceContainer,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -516,7 +516,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(CalmSurfaceContainerHigh),
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -530,12 +530,12 @@ fun SettingsScreen(
                             Text(
                                 text = "Base v1.0",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Built for calm minds • Friction-free",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = CalmTextMuted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -543,7 +543,7 @@ fun SettingsScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(9999.dp))
-                            .background(CalmSecondaryContainer)
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Row(
@@ -553,13 +553,13 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.Filled.WifiOff,
                                 contentDescription = null,
-                                tint = CalmPositiveDeep,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 text = "Offline",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CalmPositiveDeep
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -646,7 +646,7 @@ fun SettingsScreen(
                     Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -671,7 +671,7 @@ fun SettingsScreen(
                         onRestoreDemoData()
                     }
                 ) {
-                    Text("Load Sample Data", color = CalmPositiveDeep, fontWeight = FontWeight.Bold)
+                    Text("Load Sample Data", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -679,7 +679,7 @@ fun SettingsScreen(
                     Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = RoundedCornerShape(24.dp)
         )
     }

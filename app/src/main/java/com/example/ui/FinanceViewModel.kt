@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.local.CategoryEntity
 import com.example.data.local.IncomeEngineEntity
 import com.example.data.local.TransactionEntity
 import com.example.data.model.CategoryItem
@@ -44,25 +45,30 @@ data class FinanceUiState(
     val transactions: List<TransactionEntity> = emptyList(),
     val incomeEngine: IncomeEngineEntity = IncomeEngineEntity(),
     val startingBalanceOffset: Double = 0.0,
-    val rollingBalance: Double = 3420.50,
-    val periodIn: Double = 4200.00,
-    val periodOut: Double = 779.50,
+    val rollingBalance: Double = 0.0,
+    val periodIn: Double = 0.0,
+    val periodOut: Double = 0.0,
     val daysLeftInPeriod: Int = 11,
-    val periodDateRangeStr: String = "Aug 11 – Aug 25",
-    val nextPaydayText: String = "Next income: $2,100 on Friday (in 3 days)",
-    val burnProgress: Float = 0.371f,
-    val burnPaceNote: String = "You're spending at a steady, balanced pace ($70.86/day).",
+    val periodDateRangeStr: String = "",
+    val nextPaydayText: String = "",
+    val burnProgress: Float = 0f,
+    val burnPaceNote: String = "No transactions recorded yet.",
     val rankedBreakdown: List<CategorySpend> = emptyList(),
     val currentPeriod: AnalyticsPeriod = AnalyticsPeriod.CURRENT_PAYCHECK,
-    val dbSizeBytes: Long = 142 * 1024L
+    val dbSizeBytes: Long = 0L,
+    val categories: List<CategoryItem> = DefaultCategories.list
 )
 
-class FinanceViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository: FinanceRepository
+class FinanceViewModel @JvmOverloads constructor(
+    application: Application,
+    private val repository: FinanceRepository = FinanceRepository(
+        application,
+        AppDatabase.getInstance(application).financeDao()
+    ),
+    sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
+) : AndroidViewModel(application) {
 
     init {
-        val database = AppDatabase.getInstance(application)
-        repository = FinanceRepository(application, database.financeDao())
         viewModelScope.launch {
             repository.checkAndSeedInitialData()
         }
@@ -93,9 +99,16 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         repository.allTransactions,
         repository.incomeEngineConfig,
         repository.startingBalanceOffset,
-        _analyticsPeriod
-    ) { transactions, incomeConfigRaw, offset, period ->
+        _analyticsPeriod,
+        repository.allCategories
+    ) { transactions, incomeConfigRaw, offset, period, categoriesRaw ->
         val incomeConfig = incomeConfigRaw ?: IncomeEngineEntity()
+
+        val categoryItems = if (categoriesRaw.isEmpty()) {
+            DefaultCategories.list
+        } else {
+            categoriesRaw.map { DefaultCategories.fromEntity(it) }
+        }
 
         val totalIncome = transactions.filter { !it.isExpense }.sumOf { it.amount }
         val totalExpenses = transactions.filter { it.isExpense }.sumOf { it.amount }
@@ -111,33 +124,28 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
 
         val periodTransactions = transactions.filter { it.timestamp >= cutoff }
-        val actualIncomeInPeriod = transactions.filter { !it.isExpense && it.timestamp >= cutoff }.sumOf { it.amount }
-        val periodIn = if (transactions.isEmpty()) {
-            0.0
-        } else if (period == AnalyticsPeriod.CURRENT_PAYCHECK) {
-            incomeConfig.expectedIncome.coerceAtLeast(actualIncomeInPeriod)
+        val periodIn = periodTransactions.filter { !it.isExpense }.sumOf { it.amount }
+        val periodOut = periodTransactions.filter { it.isExpense }.sumOf { it.amount }
+
+        val burnRatio = if (periodIn > 0) {
+            (periodOut / periodIn).toFloat().coerceIn(0f, 1f)
+        } else if (incomeConfig.expectedIncome > 0 && periodOut > 0) {
+            (periodOut / incomeConfig.expectedIncome).toFloat().coerceIn(0f, 1f)
         } else {
-            (incomeConfig.expectedIncome * 2).coerceAtLeast(actualIncomeInPeriod)
-        }
-        val periodOut = if (transactions.isEmpty()) {
-            0.0
-        } else {
-            periodTransactions.filter { it.isExpense }.sumOf { it.amount }.let {
-                if (it == 0.0 && transactions.isNotEmpty()) totalExpenses else it
-            }
+            0f
         }
 
-        val burnRatio = if (periodIn > 0) (periodOut / periodIn).toFloat().coerceIn(0f, 1f) else 0f
-        val daysInPeriod = if (period == AnalyticsPeriod.CURRENT_PAYCHECK) 14 else 30
-        val daysElapsed = 14 - 11 // ~3-4 days
-        val dailyPace = if (daysElapsed > 0) periodOut / daysElapsed.coerceAtLeast(1) else 0.0
+        val daysLeft = ((incomeConfig.nextPaydayTimestamp - now) / dayMillis).toInt().coerceIn(1, 14)
+        val daysElapsed = (14 - daysLeft).coerceAtLeast(1)
+        val dailyPace = if (periodOut > 0) periodOut / daysElapsed else 0.0
 
-        val paceNote = if (transactions.isEmpty()) {
-            "No transactions recorded yet."
+        val paceNote = if (transactions.isEmpty() || periodOut == 0.0) {
+            if (transactions.isEmpty()) "No transactions recorded yet." else "No expenditures recorded for this period."
         } else if (period == AnalyticsPeriod.CURRENT_PAYCHECK) {
             "You're spending at a steady, balanced pace ($${String.format(Locale.US, "%.2f", dailyPace)}/day)."
         } else {
-            "30-day average expenditure sits at $${String.format(Locale.US, "%.2f", periodOut / 30.0)}/day."
+            val dailyPace30 = periodOut / 30.0
+            "30-day average expenditure sits at $${String.format(Locale.US, "%.2f", dailyPace30)}/day."
         }
 
         // Breakdown by category
@@ -151,7 +159,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             val percent = (catTotal / totalSpendAmount).toFloat()
             val avg = if (count > 0) catTotal / count else 0.0
             CategorySpend(
-                category = DefaultCategories.getCategoryByName(catName),
+                category = DefaultCategories.getCategoryByName(catName, categoryItems),
                 totalAmount = catTotal,
                 transactionCount = count,
                 percentageOfSpend = percent,
@@ -165,7 +173,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         val endDateStr = sdf.format(now)
         val dateRangeStr = "$startDateStr – $endDateStr"
 
-        val daysLeft = ((incomeConfig.nextPaydayTimestamp - now) / dayMillis).toInt().coerceAtLeast(1)
         val nextIncomeDayName = SimpleDateFormat("EEEE", Locale.US).format(incomeConfig.nextPaydayTimestamp)
         val nextPaydayText = "Next income: $${String.format(Locale.US, "%,.0f", incomeConfig.expectedIncome)} on $nextIncomeDayName (in $daysLeft days)"
 
@@ -177,17 +184,18 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             periodIn = periodIn,
             periodOut = periodOut,
             daysLeftInPeriod = daysLeft,
-            periodDateRangeStr = if (period == AnalyticsPeriod.CURRENT_PAYCHECK) "Aug 11 – Aug 25" else "Jul 26 – Aug 25",
+            periodDateRangeStr = dateRangeStr,
             nextPaydayText = nextPaydayText,
             burnProgress = burnRatio,
             burnPaceNote = paceNote,
             rankedBreakdown = rankedBreakdown,
             currentPeriod = period,
-            dbSizeBytes = repository.getDatabaseSizeBytes()
+            dbSizeBytes = repository.getDatabaseSizeBytes(),
+            categories = categoryItems
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        started = sharingStarted,
         initialValue = FinanceUiState()
     )
 
@@ -307,6 +315,41 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.restoreDemoData()
             showToast("Demo sample data restored")
+        }
+    }
+
+    fun createCategory(name: String, iconKey: String, colorHex: Long) {
+        viewModelScope.launch {
+            repository.insertCategory(
+                CategoryEntity(
+                    name = name.trim(),
+                    iconKey = iconKey,
+                    colorHex = colorHex
+                )
+            )
+            showToast("Category \"${name.trim()}\" created")
+        }
+    }
+
+    fun updateCategory(id: Long, name: String, iconKey: String, colorHex: Long, oldName: String) {
+        viewModelScope.launch {
+            repository.updateCategory(
+                CategoryEntity(
+                    id = id,
+                    name = name.trim(),
+                    iconKey = iconKey,
+                    colorHex = colorHex
+                ),
+                oldName = oldName
+            )
+            showToast("Category updated")
+        }
+    }
+
+    fun deleteCategory(id: Long, name: String) {
+        viewModelScope.launch {
+            repository.deleteCategory(id, name)
+            showToast("Category \"$name\" deleted")
         }
     }
 

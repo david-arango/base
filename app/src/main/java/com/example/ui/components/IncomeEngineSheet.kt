@@ -112,7 +112,7 @@ fun IncomeEngineSheet(
                         .width(40.dp)
                         .height(4.dp)
                         .clip(RoundedCornerShape(9999.dp))
-                        .background(CalmDividerHairline)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
                 )
             }
         },
@@ -142,13 +142,13 @@ fun IncomeEngineSheet(
                     Icon(
                         imageVector = Icons.Filled.SyncAlt,
                         contentDescription = null,
-                        tint = CalmTextMuted,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
                         text = "STEP 2 OF 4",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = CalmTextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -165,14 +165,14 @@ fun IncomeEngineSheet(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(9999.dp))
-                    .background(CalmSurfaceContainerHigh)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.5f)
                         .height(6.dp)
                         .clip(RoundedCornerShape(9999.dp))
-                        .background(CalmSecondary)
+                        .background(MaterialTheme.colorScheme.secondary)
                 )
             }
 
@@ -183,13 +183,13 @@ fun IncomeEngineSheet(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(CalmSecondaryContainer),
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.WaterDrop,
                     contentDescription = null,
-                    tint = CalmPositiveDeep,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.size(26.dp)
                 )
             }
@@ -202,19 +202,19 @@ fun IncomeEngineSheet(
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = (-0.5).sp
                 ),
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
                 text = "Base calculates your continuous rolling balance automatically. Tell us when and what you get paid.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = CalmTextMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
             )
 
             // Income Engine Input Card (Cardstock)
             Surface(
-                color = CalmSurfaceContainerLowest,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(24.dp),
                 shadowElevation = 1.dp,
                 modifier = Modifier
@@ -237,13 +237,13 @@ fun IncomeEngineSheet(
                             Text(
                                 text = "EXPECTED INCOME",
                                 style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
-                                color = CalmTextMuted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(9999.dp))
-                                    .background(CalmSecondaryContainer)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer)
                                     .padding(horizontal = 8.dp, vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -252,12 +252,12 @@ fun IncomeEngineSheet(
                                     modifier = Modifier
                                         .size(6.dp)
                                         .clip(CircleShape)
-                                        .background(CalmSecondary)
+                                        .background(MaterialTheme.colorScheme.primary)
                                 )
                                 Text(
                                     text = "Recurring",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = CalmPositiveDeep
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
                         }
@@ -269,7 +269,7 @@ fun IncomeEngineSheet(
                             Text(
                                 text = "$",
                                 style = MaterialTheme.typography.displayMedium,
-                                color = CalmTextMuted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             OutlinedTextField(
@@ -303,25 +303,25 @@ fun IncomeEngineSheet(
                         Text(
                             text = "Take-home pay per cycle",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = CalmTextMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
-                    HorizontalDivider(thickness = 1.dp, color = CalmSurfaceContainerHigh)
+                    HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
                     // Cadence Pills
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             text = "CADENCE",
                             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
-                            color = CalmTextMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(9999.dp))
-                                .background(CalmSurfaceContainer)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .padding(4.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
@@ -331,7 +331,7 @@ fun IncomeEngineSheet(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(RoundedCornerShape(9999.dp))
-                                        .background(if (isSelected) CalmPrimaryContainer else Color.Transparent)
+                                        .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                         .clickable { selectedCadence = cadence }
                                         .padding(vertical = 8.dp),
                                     contentAlignment = Alignment.Center
@@ -341,14 +341,14 @@ fun IncomeEngineSheet(
                                         style = MaterialTheme.typography.labelMedium.copy(
                                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
                                         ),
-                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
                         }
                     }
 
-                    HorizontalDivider(thickness = 1.dp, color = CalmSurfaceContainerHigh)
+                    HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
                     // Next Payday Row
                     Row(
@@ -364,7 +364,7 @@ fun IncomeEngineSheet(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(CalmSurfaceContainer),
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -378,7 +378,7 @@ fun IncomeEngineSheet(
                                 Text(
                                     text = "NEXT PAYDAY",
                                     style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
-                                    color = CalmTextMuted
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = formattedDate,
@@ -392,7 +392,7 @@ fun IncomeEngineSheet(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(9999.dp))
-                                .background(CalmSurfaceContainer)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .clickable {
                                     // advance by 7 or 14 days
                                     val advance = if (selectedCadence == "Weekly") 7L else 14L
@@ -411,7 +411,7 @@ fun IncomeEngineSheet(
                             Icon(
                                 imageVector = Icons.Filled.ExpandMore,
                                 contentDescription = null,
-                                tint = CalmTextMuted,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -421,7 +421,7 @@ fun IncomeEngineSheet(
 
             // Preview Ambient Callout Card
             Surface(
-                color = CalmSecondaryContainer.copy(alpha = 0.45f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -436,13 +436,13 @@ fun IncomeEngineSheet(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(CalmSecondaryContainer),
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.AutoAwesome,
                             contentDescription = null,
-                            tint = CalmPositiveDeep,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -455,18 +455,18 @@ fun IncomeEngineSheet(
                             Text(
                                 text = "How it works",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Box(
                                 modifier = Modifier
                                     .size(5.dp)
                                     .clip(CircleShape)
-                                    .background(CalmSecondary)
+                                    .background(MaterialTheme.colorScheme.primary)
                             )
                             Text(
                                 text = "Zero effort",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CalmSecondary
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
@@ -482,7 +482,7 @@ fun IncomeEngineSheet(
 
             // Editorial Micro-Card: Stored 100% on your device
             Surface(
-                color = CalmSurfaceContainer,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -497,13 +497,13 @@ fun IncomeEngineSheet(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(CalmSurfaceContainerLowest),
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Security,
                             contentDescription = null,
-                            tint = CalmSecondary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -512,12 +512,12 @@ fun IncomeEngineSheet(
                         Text(
                             text = "Stored 100% on your device",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "No bank credentials, no logins, no third-party tracking.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = CalmTextMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -530,8 +530,8 @@ fun IncomeEngineSheet(
                     onSave(finalAmt, selectedCadence, nextPaydayTimestamp)
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = CalmPrimaryContainer,
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 shape = RoundedCornerShape(9999.dp),
                 modifier = Modifier
