@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -31,27 +32,30 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -68,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.local.TransactionEntity
 import com.example.data.model.CategoryItem
 import com.example.data.model.DefaultCategories
 import com.example.ui.theme.CalmDividerHairline
@@ -92,20 +97,35 @@ import java.util.Locale
 @Composable
 fun NewTransactionSheet(
     isOpen: Boolean,
+    transactionToEdit: TransactionEntity? = null,
     categories: List<CategoryItem> = DefaultCategories.list,
     onDismiss: () -> Unit,
-    onSave: (title: String, category: String, amount: Double, isExpense: Boolean, note: String, timestamp: Long) -> Unit
+    onSave: (title: String, category: String, amount: Double, isExpense: Boolean, note: String, timestamp: Long) -> Unit,
+    onDelete: ((Long) -> Unit)? = null
 ) {
     if (!isOpen) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    var isExpense by remember { mutableStateOf(true) }
-    var rawAmount by remember { mutableStateOf("") }
-    var selectedCategory by remember(categories) { mutableStateOf(categories.firstOrNull()?.name ?: "Groceries") }
-    var noteText by remember { mutableStateOf("") }
-    var selectedTimestamp by remember { mutableStateOf(System.currentTimeMillis()) }
+    var isExpense by remember(transactionToEdit) { mutableStateOf(transactionToEdit?.isExpense ?: true) }
+    var rawAmount by remember(transactionToEdit) {
+        mutableStateOf(
+            transactionToEdit?.let { tx ->
+                val amt = tx.amount
+                if (amt == amt.toLong().toDouble()) amt.toLong().toString()
+                else String.format(Locale.US, "%.2f", amt)
+            } ?: ""
+        )
+    }
+    var selectedCategory by remember(transactionToEdit, categories) {
+        mutableStateOf(transactionToEdit?.category ?: categories.firstOrNull()?.name ?: "Groceries")
+    }
+    var noteText by remember(transactionToEdit) { mutableStateOf(transactionToEdit?.note ?: "") }
+    var selectedTimestamp by remember(transactionToEdit) {
+        mutableStateOf(transactionToEdit?.timestamp ?: System.currentTimeMillis())
+    }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     val formattedDate = remember(selectedTimestamp) {
         val nowCal = Calendar.getInstance()
@@ -119,6 +139,50 @@ fun NewTransactionSheet(
             val sdf = SimpleDateFormat("EEE, MMM d", Locale.US)
             sdf.format(Date(selectedTimestamp))
         }
+    }
+
+    if (showDeleteConfirmation && transactionToEdit != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = {
+                Text(
+                    text = "Delete Transaction?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete this ${if (transactionToEdit.isExpense) "expense" else "income"} of $${String.format(Locale.US, "%.2f", transactionToEdit.amount)}? This will update your rolling balance.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        onDelete?.invoke(transactionToEdit.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier.testTag("confirm_delete_btn")
+                ) {
+                    Text("Delete", fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirmation = false },
+                    modifier = Modifier.testTag("cancel_delete_btn")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 
     ModalBottomSheet(
@@ -148,7 +212,7 @@ fun NewTransactionSheet(
                 .fillMaxWidth()
                 .navigationBarsPadding()
         ) {
-            // Header Row: Close, Title, Expense/Income Toggle
+            // Header Row: Close, Title, Delete (if editing), Expense/Income Toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -173,16 +237,37 @@ fun NewTransactionSheet(
                         )
                     }
                     Text(
-                        text = "New Transaction",
+                        text = if (transactionToEdit != null) "Edit Transaction" else "New Transaction",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = (-0.2).sp
                         ),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.testTag("transaction_sheet_title")
                     )
                 }
 
-                // Expense / Income Pill Switcher
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (transactionToEdit != null && onDelete != null) {
+                        IconButton(
+                            onClick = { showDeleteConfirmation = true },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .testTag("header_delete_transaction_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.DeleteOutline,
+                                contentDescription = "Delete Transaction",
+                                tint = CalmNegativeDeep,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    // Expense / Income Pill Switcher
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(9999.dp))
@@ -240,6 +325,7 @@ fun NewTransactionSheet(
                     }
                 }
             }
+        }
 
             HorizontalDivider(
                 thickness = 1.dp,
@@ -480,14 +566,40 @@ fun NewTransactionSheet(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+                    val actionLabel = if (transactionToEdit != null) "Update Transaction" else "Save Transaction"
                     Text(
                         text = if (parsedAmount > 0.0) {
-                            "Save Transaction (${if (isExpense) "-" else "+"}$$amountStr)"
+                            "$actionLabel (${if (isExpense) "-" else "+"}$$amountStr)"
                         } else {
-                            "Save Transaction"
+                            actionLabel
                         },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                     )
+                }
+
+                if (transactionToEdit != null && onDelete != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedButton(
+                        onClick = { showDeleteConfirmation = true },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = CalmNegativeDeep
+                        ),
+                        border = BorderStroke(1.dp, CalmNegativeDeep.copy(alpha = 0.35f)),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .testTag("sheet_delete_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.DeleteOutline,
+                            contentDescription = "Delete",
+                            tint = CalmNegativeDeep,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Delete Transaction", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
 

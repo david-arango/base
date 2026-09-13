@@ -78,6 +78,7 @@ fun BaseApp(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val isNewTxOpen by viewModel.isNewTransactionSheetOpen.collectAsStateWithLifecycle()
+    val editingTx by viewModel.editingTransaction.collectAsStateWithLifecycle()
     val isIncomeEngineOpen by viewModel.isIncomeEngineOpen.collectAsStateWithLifecycle()
     val isCategoryManagerOpen by viewModel.isCategoryManagerOpen.collectAsStateWithLifecycle()
     val isStartingBalanceOpen by viewModel.isStartingBalanceDialogOpen.collectAsStateWithLifecycle()
@@ -122,6 +123,7 @@ fun BaseApp(
                             LedgerScreen(
                                 uiState = uiState,
                                 onOpenNewTransaction = { viewModel.openNewTransactionSheet() },
+                                onEditTransaction = { viewModel.openEditTransaction(it) },
                                 onDeleteTransaction = { viewModel.deleteTransaction(it) }
                             )
                         }
@@ -179,10 +181,26 @@ fun BaseApp(
         // Modal Sheets and Dialogs
         NewTransactionSheet(
             isOpen = isNewTxOpen,
+            transactionToEdit = editingTx,
             categories = uiState.categories,
             onDismiss = { viewModel.closeNewTransactionSheet() },
             onSave = { title, category, amount, isExpense, note, timestamp ->
-                viewModel.addTransaction(title, category, amount, isExpense, note, timestamp)
+                if (editingTx != null) {
+                    viewModel.updateTransaction(
+                        id = editingTx!!.id,
+                        title = title,
+                        category = category,
+                        amount = amount,
+                        isExpense = isExpense,
+                        note = note,
+                        timestamp = timestamp
+                    )
+                } else {
+                    viewModel.addTransaction(title, category, amount, isExpense, note, timestamp)
+                }
+            },
+            onDelete = { id ->
+                viewModel.deleteTransaction(id)
             }
         )
 

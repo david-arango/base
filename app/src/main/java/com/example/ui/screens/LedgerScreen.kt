@@ -29,6 +29,9 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -37,8 +40,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,9 +81,57 @@ import java.util.Locale
 fun LedgerScreen(
     uiState: FinanceUiState,
     onOpenNewTransaction: () -> Unit,
+    onEditTransaction: (TransactionEntity) -> Unit = {},
     onDeleteTransaction: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var transactionToDelete by remember { mutableStateOf<TransactionEntity?>(null) }
+
+    if (transactionToDelete != null) {
+        val tx = transactionToDelete!!
+        AlertDialog(
+            onDismissRequest = { transactionToDelete = null },
+            title = {
+                Text(
+                    text = "Delete Transaction?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${tx.title}\" (${if (tx.isExpense) "-" else "+"}$${String.format(Locale.US, "%.2f", tx.amount)})? This will update your rolling balance.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteTransaction(tx.id)
+                        transactionToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier.testTag("ledger_confirm_delete_btn")
+                ) {
+                    Text("Delete", fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { transactionToDelete = null },
+                    modifier = Modifier.testTag("ledger_cancel_delete_btn")
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         val groupedTransactions = remember(uiState.transactions) {
             groupTransactionsByDay(uiState.transactions)
@@ -187,7 +242,8 @@ fun LedgerScreen(
                                     TransactionItemRow(
                                         transaction = tx,
                                         categories = uiState.categories,
-                                        onDelete = { onDeleteTransaction(tx.id) }
+                                        onEdit = { onEditTransaction(tx) },
+                                        onDelete = { transactionToDelete = tx }
                                     )
                                     if (index < transactionsInGroup.lastIndex) {
                                         HorizontalDivider(
@@ -427,6 +483,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
 fun TransactionItemRow(
     transaction: TransactionEntity,
     categories: List<CategoryItem> = emptyList(),
+    onEdit: () -> Unit = {},
     onDelete: () -> Unit
 ) {
     val category = remember(transaction.category, categories) {
@@ -444,8 +501,11 @@ fun TransactionItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onEdit() }
             .background(if (isIncomeHighlight) CalmSecondaryContainer.copy(alpha = 0.25f) else Color.Transparent)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .testTag("transaction_row_${transaction.id}"),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -516,10 +576,10 @@ fun TransactionItemRow(
             }
         }
 
-        // Amount & Status
-        Column(
-            horizontalAlignment = Alignment.End,
-            modifier = Modifier.padding(start = 8.dp)
+        // Amount & Delete Action
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             val amountFormatted = String.format(Locale.US, "%,.2f", transaction.amount)
             Text(
@@ -527,13 +587,23 @@ fun TransactionItemRow(
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
-                color = if (isExpense) CalmNegativeDeep else CalmPositiveDeep
+                color = if (isExpense) CalmNegativeDeep else CalmPositiveDeep,
+                modifier = Modifier.padding(start = 8.dp)
             )
-            Text(
-                text = transaction.statusText,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isIncomeHighlight) CalmPositiveDeep else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier
+                    .size(36.dp)
+                    .testTag("btn_delete_tx_${transaction.id}")
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.DeleteOutline,
+                    contentDescription = "Delete ${transaction.title}",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }

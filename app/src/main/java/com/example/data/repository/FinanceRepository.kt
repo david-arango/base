@@ -35,6 +35,12 @@ class FinanceRepository(
         return dao.insertTransaction(transaction)
     }
 
+    suspend fun updateTransaction(transaction: TransactionEntity) {
+        withContext(ioDispatcher) {
+            dao.updateTransaction(transaction)
+        }
+    }
+
     suspend fun deleteTransaction(id: Long) {
         dao.deleteTransactionById(id)
     }

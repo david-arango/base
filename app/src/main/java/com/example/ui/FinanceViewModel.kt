@@ -83,6 +83,9 @@ class FinanceViewModel @JvmOverloads constructor(
     private val _isNewTransactionSheetOpen = MutableStateFlow(false)
     val isNewTransactionSheetOpen: StateFlow<Boolean> = _isNewTransactionSheetOpen.asStateFlow()
 
+    private val _editingTransaction = MutableStateFlow<TransactionEntity?>(null)
+    val editingTransaction: StateFlow<TransactionEntity?> = _editingTransaction.asStateFlow()
+
     private val _isIncomeEngineOpen = MutableStateFlow(false)
     val isIncomeEngineOpen: StateFlow<Boolean> = _isIncomeEngineOpen.asStateFlow()
 
@@ -244,11 +247,18 @@ class FinanceViewModel @JvmOverloads constructor(
     }
 
     fun openNewTransactionSheet() {
+        _editingTransaction.value = null
+        _isNewTransactionSheetOpen.value = true
+    }
+
+    fun openEditTransaction(transaction: TransactionEntity) {
+        _editingTransaction.value = transaction
         _isNewTransactionSheetOpen.value = true
     }
 
     fun closeNewTransactionSheet() {
         _isNewTransactionSheetOpen.value = false
+        _editingTransaction.value = null
     }
 
     fun openIncomeEngine() {
@@ -310,9 +320,39 @@ class FinanceViewModel @JvmOverloads constructor(
         }
     }
 
+    fun updateTransaction(
+        id: Long,
+        title: String,
+        category: String,
+        amount: Double,
+        isExpense: Boolean,
+        note: String,
+        timestamp: Long = System.currentTimeMillis()
+    ) {
+        viewModelScope.launch {
+            val status = if (isExpense) "Settled" else "Deposited"
+            val displayTitle = if (title.isNotBlank()) title else category
+            repository.updateTransaction(
+                TransactionEntity(
+                    id = id,
+                    title = displayTitle,
+                    category = category,
+                    amount = amount,
+                    isExpense = isExpense,
+                    timestamp = timestamp,
+                    note = note,
+                    statusText = status
+                )
+            )
+            closeNewTransactionSheet()
+            showToast("Transaction updated (${if (isExpense) "-" else "+"}$${String.format(Locale.US, "%.2f", amount)})")
+        }
+    }
+
     fun deleteTransaction(id: Long) {
         viewModelScope.launch {
             repository.deleteTransaction(id)
+            closeNewTransactionSheet()
             showToast("Transaction removed from ledger")
         }
     }

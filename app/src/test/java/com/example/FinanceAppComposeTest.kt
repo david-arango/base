@@ -9,9 +9,13 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import com.example.data.local.TransactionEntity
 import com.example.data.model.DefaultCategories
+import com.example.ui.FinanceUiState
 import com.example.ui.components.CategoryEditorDialog
 import com.example.ui.components.CategoryManagerSheet
+import com.example.ui.components.NewTransactionSheet
+import com.example.ui.screens.LedgerScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import org.junit.Assert.assertEquals
@@ -358,5 +362,166 @@ class FinanceAppComposeTest {
         assertEquals("123", clickedDigits)
         assertTrue(decimalClicked)
         assertEquals(1, backspaceCount)
+    }
+
+    @Test
+    fun editTransaction_loadsExistingDataAndSaves() {
+        val originalTx = TransactionEntity(
+            id = 42L,
+            title = "Whole Foods Market",
+            category = "Groceries",
+            amount = 88.50,
+            isExpense = true,
+            timestamp = 1700000000000L,
+            note = "Weekly organic groceries",
+            statusText = "Settled"
+        )
+
+        var savedTitle: String? = null
+        var savedCategory: String? = null
+        var savedAmount: Double? = null
+        var savedIsExpense: Boolean? = null
+        var savedNote: String? = null
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                NewTransactionSheet(
+                    isOpen = true,
+                    transactionToEdit = originalTx,
+                    onDismiss = {},
+                    onSave = { title, category, amount, isExpense, note, _ ->
+                        savedTitle = title
+                        savedCategory = category
+                        savedAmount = amount
+                        savedIsExpense = isExpense
+                        savedNote = note
+                    },
+                    onDelete = {}
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Verify title indicates Edit Transaction
+        composeTestRule.onNodeWithText("Edit Transaction").assertIsDisplayed()
+
+        // Verify delete button is displayed in header
+        composeTestRule.onNodeWithTag("header_delete_transaction_btn").assertIsDisplayed()
+
+        // Verify sheet delete button is displayed
+        composeTestRule.onNodeWithTag("sheet_delete_button").assertIsDisplayed()
+
+        // Verify Save button has Update Transaction label
+        composeTestRule.onNodeWithTag("save_transaction_button").assertIsDisplayed()
+
+        // Click save button
+        composeTestRule.onNodeWithTag("save_transaction_button").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals("Weekly organic groceries", savedNote)
+        assertEquals(true, savedIsExpense)
+        assertTrue(savedAmount != null && savedAmount!! > 0)
+    }
+
+    @Test
+    fun editTransaction_deleteConfirmationFlow() {
+        val originalTx = TransactionEntity(
+            id = 99L,
+            title = "Old Subscription",
+            category = "Utilities",
+            amount = 14.99,
+            isExpense = true,
+            timestamp = 1700000000000L,
+            note = "Streaming",
+            statusText = "Settled"
+        )
+
+        var deletedId: Long? = null
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                NewTransactionSheet(
+                    isOpen = true,
+                    transactionToEdit = originalTx,
+                    onDismiss = {},
+                    onSave = { _, _, _, _, _, _ -> },
+                    onDelete = { deletedId = it }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Click delete button on the sheet
+        composeTestRule.onNodeWithTag("sheet_delete_button").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify confirmation dialog is visible
+        composeTestRule.onNodeWithText("Delete Transaction?").assertIsDisplayed()
+
+        // Cancel first
+        composeTestRule.onNodeWithTag("cancel_delete_btn").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(null, deletedId)
+
+        // Click header delete button
+        composeTestRule.onNodeWithTag("header_delete_transaction_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        // Confirm delete
+        composeTestRule.onNodeWithTag("confirm_delete_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(99L, deletedId)
+    }
+
+    @Test
+    fun ledgerScreen_rowClickTriggersEdit_andDeleteIconTriggersConfirmation() {
+        val testTx = TransactionEntity(
+            id = 101L,
+            title = "Dinner with Team",
+            category = "Dining Out",
+            amount = 45.0,
+            isExpense = true,
+            timestamp = System.currentTimeMillis(),
+            note = "Team dinner",
+            statusText = "Settled"
+        )
+
+        var editedTx: TransactionEntity? = null
+        var deletedId: Long? = null
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                LedgerScreen(
+                    uiState = FinanceUiState(
+                        transactions = listOf(testTx)
+                    ),
+                    onOpenNewTransaction = {},
+                    onEditTransaction = { editedTx = it },
+                    onDeleteTransaction = { deletedId = it }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Verify transaction row is displayed
+        composeTestRule.onNodeWithTag("transaction_row_101").assertIsDisplayed()
+
+        // Tap on the row to trigger edit
+        composeTestRule.onNodeWithTag("transaction_row_101").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(101L, editedTx?.id)
+
+        // Tap the delete icon button on the row
+        composeTestRule.onNodeWithTag("btn_delete_tx_101").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify ledger delete confirmation dialog appears
+        composeTestRule.onNodeWithText("Delete Transaction?").assertIsDisplayed()
+
+        // Confirm delete
+        composeTestRule.onNodeWithTag("ledger_confirm_delete_btn").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(101L, deletedId)
     }
 }
