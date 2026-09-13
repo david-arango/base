@@ -154,33 +154,6 @@ class FinanceAppComposeTest {
     }
 
     @Test
-    fun settingsScreen_restoreDemoDataDialogFlow() {
-        composeTestRule.setContent {
-            MyApplicationTheme {
-                BaseApp()
-            }
-        }
-        composeTestRule.waitForIdle()
-
-        // Navigate to Settings
-        composeTestRule.onNodeWithTag("nav_tab_settings").performClick()
-        composeTestRule.waitForIdle()
-
-        // Scroll to restore button
-        composeTestRule.onNodeWithTag("settings_lazy_column").performScrollToIndex(5)
-        composeTestRule.waitForIdle()
-
-        // Click restore demo data
-        composeTestRule.onNodeWithTag("restore_demo_data_btn").assertIsDisplayed().performClick()
-        composeTestRule.waitForIdle()
-
-        // Dialog should appear
-        composeTestRule.onNodeWithText("Load Demo Sample Data?").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Cancel").performClick()
-        composeTestRule.waitForIdle()
-    }
-
-    @Test
     fun settingsScreen_incomeEngineSheetFlow() {
         composeTestRule.setContent {
             MyApplicationTheme {
@@ -198,8 +171,8 @@ class FinanceAppComposeTest {
         composeTestRule.waitForIdle()
 
         // Assert sheet components
-        composeTestRule.onNodeWithText("The Engine").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Skip for now").performClick()
+        composeTestRule.onNodeWithText("THE ENGINE", substring = true, ignoreCase = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Cancel").performClick()
         composeTestRule.waitForIdle()
 
         // Income engine row should be visible again
@@ -318,5 +291,72 @@ class FinanceAppComposeTest {
         // Click Done button
         composeTestRule.onNodeWithTag("done_category_manager_btn").performClick()
         assertTrue(dismissed)
+    }
+
+    @Test
+    fun startingBalanceDialog_keypadInputAndConfirmation() {
+        var confirmedValue: Double? = null
+        var dismissed = false
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                com.example.ui.components.StartingBalanceDialog(
+                    isOpen = true,
+                    currentOffset = 0.0,
+                    onDismiss = { dismissed = true },
+                    onConfirm = { confirmedValue = it }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Verify keypad and display exist
+        composeTestRule.onNodeWithTag("starting_balance_display").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("keypad_key_7").performClick()
+        composeTestRule.onNodeWithTag("keypad_key_5").performClick()
+        composeTestRule.onNodeWithTag("keypad_key_dot").performClick()
+        composeTestRule.onNodeWithTag("keypad_key_5").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify display shows 75.5
+        composeTestRule.onNodeWithText("75.5").assertIsDisplayed()
+
+        // Toggle to negative balance
+        composeTestRule.onNodeWithText("- Negative Balance").performClick()
+        composeTestRule.waitForIdle()
+
+        // Click Save Offset
+        composeTestRule.onNodeWithTag("save_starting_balance_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(-75.5, confirmedValue!!, 0.001)
+    }
+
+    @Test
+    fun numericKeypad_directComponentClicks() {
+        var clickedDigits = ""
+        var decimalClicked = false
+        var backspaceCount = 0
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                com.example.ui.components.NumericKeypad(
+                    onDigitClick = { clickedDigits += it },
+                    onDecimalClick = { decimalClicked = true },
+                    onBackspaceClick = { backspaceCount++ }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("keypad_key_1").performClick()
+        composeTestRule.onNodeWithTag("keypad_key_2").performClick()
+        composeTestRule.onNodeWithTag("keypad_key_3").performClick()
+        composeTestRule.onNodeWithTag("keypad_key_dot").performClick()
+        composeTestRule.onNodeWithTag("keypad_key_backspace").performClick()
+
+        assertEquals("123", clickedDigits)
+        assertTrue(decimalClicked)
+        assertEquals(1, backspaceCount)
     }
 }

@@ -36,6 +36,10 @@ import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -80,6 +84,7 @@ import com.example.ui.theme.CalmSurfaceContainerLowest
 import com.example.ui.theme.CalmTerracotta
 import com.example.ui.theme.CalmTextMuted
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -89,7 +94,7 @@ fun NewTransactionSheet(
     isOpen: Boolean,
     categories: List<CategoryItem> = DefaultCategories.list,
     onDismiss: () -> Unit,
-    onSave: (title: String, category: String, amount: Double, isExpense: Boolean, note: String) -> Unit
+    onSave: (title: String, category: String, amount: Double, isExpense: Boolean, note: String, timestamp: Long) -> Unit
 ) {
     if (!isOpen) return
 
@@ -99,10 +104,21 @@ fun NewTransactionSheet(
     var rawAmount by remember { mutableStateOf("") }
     var selectedCategory by remember(categories) { mutableStateOf(categories.firstOrNull()?.name ?: "Groceries") }
     var noteText by remember { mutableStateOf("") }
+    var selectedTimestamp by remember { mutableStateOf(System.currentTimeMillis()) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
-    val formattedDate = remember {
-        val sdf = SimpleDateFormat("MMM d", Locale.US)
-        "Today, " + sdf.format(Date())
+    val formattedDate = remember(selectedTimestamp) {
+        val nowCal = Calendar.getInstance()
+        val selCal = Calendar.getInstance().apply { timeInMillis = selectedTimestamp }
+        val isToday = nowCal.get(Calendar.YEAR) == selCal.get(Calendar.YEAR) &&
+                nowCal.get(Calendar.DAY_OF_YEAR) == selCal.get(Calendar.DAY_OF_YEAR)
+        if (isToday) {
+            val sdf = SimpleDateFormat("MMM d", Locale.US)
+            "Today, " + sdf.format(Date(selectedTimestamp))
+        } else {
+            val sdf = SimpleDateFormat("EEE, MMM d", Locale.US)
+            sdf.format(Date(selectedTimestamp))
+        }
     }
 
     ModalBottomSheet(
@@ -255,13 +271,15 @@ fun NewTransactionSheet(
                         modifier = Modifier
                             .clip(RoundedCornerShape(9999.dp))
                             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                            .clickable { showDatePicker = true }
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .testTag("select_transaction_date_chip"),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.CalendarToday,
-                            contentDescription = "Date",
+                            contentDescription = "Select Date",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(13.dp)
                         )
@@ -439,7 +457,8 @@ fun NewTransactionSheet(
                                 selectedCategory,
                                 parsedAmount,
                                 isExpense,
-                                noteText
+                                noteText,
+                                selectedTimestamp
                             )
                         }
                     },
@@ -581,7 +600,7 @@ fun NewTransactionSheet(
                                                 }
                                             }
                                         }
-                                        .testTag("keypad_key_$primary")
+                                        .testTag("keypad_key_${if (primary == ".") "dot" else primary}")
                                 ) {
                                     Box(
                                         contentAlignment = Alignment.Center,
@@ -633,6 +652,38 @@ fun NewTransactionSheet(
                     }
                 }
             }
+        }
+    }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedTimestamp
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            selectedTimestamp = it + (12 * 60 * 60 * 1000)
+                        }
+                        showDatePicker = false
+                    },
+                    modifier = Modifier.testTag("confirm_date_picker_button")
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDatePicker = false },
+                    modifier = Modifier.testTag("cancel_date_picker_button")
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

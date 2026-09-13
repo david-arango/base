@@ -135,7 +135,35 @@ class FinanceViewModel @JvmOverloads constructor(
             0f
         }
 
-        val daysLeft = ((incomeConfig.nextPaydayTimestamp - now) / dayMillis).toInt().coerceIn(1, 14)
+        val calToday = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        val calPayday = Calendar.getInstance().apply {
+            timeInMillis = incomeConfig.nextPaydayTimestamp
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        // If configured payday has already passed, roll forward according to cadence
+        if (incomeConfig.expectedIncome > 0) {
+            while (calPayday.timeInMillis < calToday.timeInMillis) {
+                when (incomeConfig.cadence.lowercase()) {
+                    "weekly" -> calPayday.add(Calendar.DAY_OF_YEAR, 7)
+                    "monthly" -> calPayday.add(Calendar.MONTH, 1)
+                    else -> calPayday.add(Calendar.DAY_OF_YEAR, 14) // Bi-Weekly
+                }
+            }
+        }
+
+        val diffDays = ((calPayday.timeInMillis - calToday.timeInMillis) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
+        val daysLeft = diffDays.coerceIn(1, 31)
         val daysElapsed = (14 - daysLeft).coerceAtLeast(1)
         val dailyPace = if (periodOut > 0) periodOut / daysElapsed else 0.0
 
@@ -173,8 +201,16 @@ class FinanceViewModel @JvmOverloads constructor(
         val endDateStr = sdf.format(now)
         val dateRangeStr = "$startDateStr – $endDateStr"
 
-        val nextIncomeDayName = SimpleDateFormat("EEEE", Locale.US).format(incomeConfig.nextPaydayTimestamp)
-        val nextPaydayText = "Next income: $${String.format(Locale.US, "%,.0f", incomeConfig.expectedIncome)} on $nextIncomeDayName (in $daysLeft days)"
+        val nextIncomeDayName = SimpleDateFormat("EEEE", Locale.US).format(calPayday.time)
+        val nextPaydayText = if (incomeConfig.expectedIncome <= 0) {
+            "No recurring income configured"
+        } else {
+            when (diffDays) {
+                0 -> "Next income: $${String.format(Locale.US, "%,.0f", incomeConfig.expectedIncome)} today"
+                1 -> "Next income: $${String.format(Locale.US, "%,.0f", incomeConfig.expectedIncome)} tomorrow (in 1 day)"
+                else -> "Next income: $${String.format(Locale.US, "%,.0f", incomeConfig.expectedIncome)} on $nextIncomeDayName (in $diffDays days)"
+            }
+        }
 
         FinanceUiState(
             transactions = transactions,
@@ -252,7 +288,8 @@ class FinanceViewModel @JvmOverloads constructor(
         category: String,
         amount: Double,
         isExpense: Boolean,
-        note: String
+        note: String,
+        timestamp: Long = System.currentTimeMillis()
     ) {
         viewModelScope.launch {
             val status = if (isExpense) "Settled" else "Deposited"
@@ -263,7 +300,7 @@ class FinanceViewModel @JvmOverloads constructor(
                     category = category,
                     amount = amount,
                     isExpense = isExpense,
-                    timestamp = System.currentTimeMillis(),
+                    timestamp = timestamp,
                     note = note,
                     statusText = status
                 )

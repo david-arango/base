@@ -1,7 +1,6 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,27 +18,27 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,16 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.IncomeEngineEntity
-import com.example.ui.theme.CalmDividerHairline
-import com.example.ui.theme.CalmPositiveDeep
-import com.example.ui.theme.CalmPrimary
-import com.example.ui.theme.CalmPrimaryContainer
-import com.example.ui.theme.CalmSecondary
-import com.example.ui.theme.CalmSecondaryContainer
-import com.example.ui.theme.CalmSurfaceContainer
-import com.example.ui.theme.CalmSurfaceContainerHigh
-import com.example.ui.theme.CalmSurfaceContainerLowest
-import com.example.ui.theme.CalmTextMuted
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -75,17 +64,27 @@ fun IncomeEngineSheet(
     isOpen: Boolean,
     currentConfig: IncomeEngineEntity,
     onDismiss: () -> Unit,
-    onSave: (expectedIncome: Double, cadence: String, nextDate: Long) -> Unit
+    onSave: (expectedIncome: Double, cadence: String, nextPaydayTimestamp: Long) -> Unit
 ) {
     if (!isOpen) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    var amountText by remember {
-        mutableStateOf(String.format(Locale.US, "%,.0f", currentConfig.expectedIncome))
+    // Remove any default values for income: empty string if 0 or negative
+    var amountText by remember(currentConfig) {
+        mutableStateOf(
+            if (currentConfig.expectedIncome > 0.0) {
+                String.format(Locale.US, "%,.0f", currentConfig.expectedIncome)
+            } else {
+                ""
+            }
+        )
     }
-    var selectedCadence by remember { mutableStateOf(currentConfig.cadence) }
-    var nextPaydayTimestamp by remember { mutableStateOf(currentConfig.nextPaydayTimestamp) }
+    var selectedCadence by remember(currentConfig) { mutableStateOf(currentConfig.cadence) }
+    var nextPaydayTimestamp by remember(currentConfig) { mutableStateOf(currentConfig.nextPaydayTimestamp) }
+
+    var showIncomeKeypadModal by remember { mutableStateOf(false) }
+    var showPaydayDatePicker by remember { mutableStateOf(false) }
 
     val formattedDate = remember(nextPaydayTimestamp) {
         val sdf = SimpleDateFormat("EEE, MMM d, yyyy", Locale.US)
@@ -127,7 +126,7 @@ fun IncomeEngineSheet(
                 .padding(horizontal = 20.dp)
                 .verticalScroll(scrollState)
         ) {
-            // Stepper Header
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -135,48 +134,22 @@ fun IncomeEngineSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.SyncAlt,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = "STEP 2 OF 4",
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
                 Text(
-                    text = "The Engine",
-                    style = MaterialTheme.typography.labelLarge,
+                    text = "THE ENGINE",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Cancel",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
-            // Progress Bar (50%)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(9999.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.5f)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(9999.dp))
-                        .background(MaterialTheme.colorScheme.secondary)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Icon + Title
             Box(
@@ -212,7 +185,7 @@ fun IncomeEngineSheet(
                 modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
             )
 
-            // Income Engine Input Card (Cardstock)
+            // Income Engine Input Card
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(24.dp),
@@ -227,7 +200,7 @@ fun IncomeEngineSheet(
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Expected Income Block
+                    // Expected Income Block with number keyboard popup trigger
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -262,44 +235,42 @@ fun IncomeEngineSheet(
                             }
                         }
 
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Interactive Amount Box triggering number keyboard
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .clickable { showIncomeKeypadModal = true }
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .testTag("expected_income_input")
                         ) {
                             Text(
                                 text = "$",
-                                style = MaterialTheme.typography.displayMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            OutlinedTextField(
-                                value = amountText,
-                                onValueChange = { input ->
-                                    val cleaned = input.filter { it.isDigit() }
-                                    amountText = if (cleaned.isNotEmpty()) {
-                                        val num = cleaned.toLongOrNull() ?: 0L
-                                        String.format(Locale.US, "%,d", num)
-                                    } else {
-                                        ""
-                                    }
-                                },
-                                singleLine = true,
-                                textStyle = MaterialTheme.typography.displayMedium.copy(
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (amountText.isNotBlank()) amountText else "Tap to enter amount",
+                                style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = if (amountText.isNotBlank()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 ),
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("expected_income_input")
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = Icons.Filled.Edit,
+                                contentDescription = "Enter Expected Income",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Take-home pay per cycle",
                             style = MaterialTheme.typography.bodyMedium,
@@ -333,7 +304,8 @@ fun IncomeEngineSheet(
                                         .clip(RoundedCornerShape(9999.dp))
                                         .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                         .clickable { selectedCadence = cadence }
-                                        .padding(vertical = 8.dp),
+                                        .padding(vertical = 8.dp)
+                                        .testTag("cadence_pill_$cadence"),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -350,9 +322,12 @@ fun IncomeEngineSheet(
 
                     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
-                    // Next Payday Row
+                    // Next Payday Row using calendar picker
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showPaydayDatePicker = true },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -369,7 +344,7 @@ fun IncomeEngineSheet(
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.CalendarToday,
-                                    contentDescription = null,
+                                    contentDescription = "Next Payday",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -388,31 +363,26 @@ fun IncomeEngineSheet(
                             }
                         }
 
-                        // Cycle through date options
+                        // Calendar Picker trigger
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(9999.dp))
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                .clickable {
-                                    // advance by 7 or 14 days
-                                    val advance = if (selectedCadence == "Weekly") 7L else 14L
-                                    nextPaydayTimestamp += advance * 24 * 60 * 60 * 1000
-                                }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                                 .testTag("change_payday_btn"),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = "Change",
+                                text = "Pick Date",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Icon(
-                                imageVector = Icons.Filled.ExpandMore,
+                                imageVector = Icons.Filled.CalendarToday,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(15.dp)
                             )
                         }
                     }
@@ -470,9 +440,13 @@ fun IncomeEngineSheet(
                             )
                         }
 
-                        val parsedAmt = amountText.replace(",", "").toDoubleOrNull() ?: 2100.0
+                        val parsedAmt = amountText.replace(",", "").toDoubleOrNull() ?: 0.0
                         Text(
-                            text = "On $previewDateStr at 12:01 AM, +$$parsedAmt will be credited to your ledger automatically. No manual logging needed.",
+                            text = if (parsedAmt > 0) {
+                                "On $previewDateStr at 12:01 AM, +$${String.format(Locale.US, "%,.2f", parsedAmt)} will be credited to your ledger automatically. No manual logging needed."
+                            } else {
+                                "Enter your expected income to project your future cash flow automatically."
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -523,10 +497,10 @@ fun IncomeEngineSheet(
                 }
             }
 
-            // Sticky-Feel Bottom Actions
+            // Save Button (changed from "Continue to Categories")
             Button(
                 onClick = {
-                    val finalAmt = amountText.replace(",", "").toDoubleOrNull() ?: 2100.0
+                    val finalAmt = amountText.replace(",", "").toDoubleOrNull() ?: 0.0
                     onSave(finalAmt, selectedCadence, nextPaydayTimestamp)
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -539,32 +513,164 @@ fun IncomeEngineSheet(
                     .height(52.dp)
                     .testTag("save_income_engine_button")
             ) {
-                Text(
-                    text = "Continue to Categories",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 Icon(
-                    imageVector = Icons.Filled.ArrowForward,
+                    imageVector = Icons.Filled.Check,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Save",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                )
             }
 
+            // Cancel Button (changed from "Skip for now")
             TextButton(
                 onClick = onDismiss,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
+                    .testTag("cancel_income_engine_button")
             ) {
                 Text(
-                    text = "Skip for now",
+                    text = "Cancel",
                     style = MaterialTheme.typography.labelLarge,
-                    color = CalmTextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+
+    // Number keyboard popup modal (like in new transaction)
+    if (showIncomeKeypadModal) {
+        ModalBottomSheet(
+            onDismissRequest = { showIncomeKeypadModal = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Expected Income Amount",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(onClick = { showIncomeKeypadModal = false }) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close")
+                    }
+                }
+
+                // Typographic display
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 14.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$",
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (amountText.isEmpty()) "0" else amountText,
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-1).sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.testTag("income_keypad_amount_display")
+                    )
+                }
+
+                Button(
+                    onClick = { showIncomeKeypadModal = false },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                        .testTag("done_income_keypad_btn"),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Done", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                NumericKeypad(
+                    onDigitClick = { digit ->
+                        val current = amountText.filter { it.isDigit() }
+                        if (current.length < 8) {
+                            val newStr = if (current == "0") digit else current + digit
+                            val num = newStr.toLongOrNull() ?: 0L
+                            amountText = String.format(Locale.US, "%,d", num)
+                        }
+                    },
+                    onDecimalClick = { /* whole dollar input for income */ },
+                    onBackspaceClick = {
+                        val current = amountText.filter { it.isDigit() }
+                        if (current.isNotEmpty()) {
+                            val dropped = current.dropLast(1)
+                            amountText = if (dropped.isNotEmpty()) {
+                                val num = dropped.toLongOrNull() ?: 0L
+                                String.format(Locale.US, "%,d", num)
+                            } else {
+                                ""
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    // Next Payday Calendar Picker
+    if (showPaydayDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = nextPaydayTimestamp
+        )
+        DatePickerDialog(
+            onDismissRequest = { showPaydayDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            nextPaydayTimestamp = it + (12 * 60 * 60 * 1000)
+                        }
+                        showPaydayDatePicker = false
+                    },
+                    modifier = Modifier.testTag("confirm_payday_picker_btn")
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showPaydayDatePicker = false },
+                    modifier = Modifier.testTag("cancel_payday_picker_btn")
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

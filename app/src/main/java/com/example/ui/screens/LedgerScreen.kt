@@ -92,60 +92,22 @@ fun LedgerScreen(
                 PerpetualRollingBalanceCard(uiState = uiState)
             }
 
-            // Ledger Stream Header & Filter Bar
+            // Ledger Stream Header
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 2.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Continuous Stream",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(9999.dp))
-                                .background(CalmSurfaceContainer)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "${uiState.transactions.size} items",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CalmTextMuted
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(9999.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.History,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "Live Sync Off",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "Continuous Stream",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
@@ -273,8 +235,8 @@ fun LedgerScreen(
         // Floating Action Button (FAB)
         FloatingActionButton(
             onClick = onOpenNewTransaction,
-            containerColor = CalmPrimary,
-            contentColor = CalmOnPrimary,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             shape = RoundedCornerShape(20.dp),
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
             modifier = Modifier
@@ -283,21 +245,11 @@ fun LedgerScreen(
                 .size(64.dp)
                 .testTag("fab_add_transaction")
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "Log new expense",
-                    modifier = Modifier.size(30.dp)
-                )
-                // Small subtle positive-deep indicator dot on top right
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(CalmPositiveDeep)
-                )
-            }
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "Log new expense",
+                modifier = Modifier.size(30.dp)
+            )
         }
     }
 }

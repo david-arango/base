@@ -85,7 +85,6 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     var showResetConfirmDialog by remember { mutableStateOf(false) }
-    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
 
     val nextPaydayFormatted = remember(uiState.incomeEngine.nextPaydayTimestamp) {
         val sdf = SimpleDateFormat("EEEE, MMM d", Locale.US)
@@ -388,26 +387,12 @@ fun SettingsScreen(
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    // Mini preview dots
-                                    Row(
-                                        modifier = Modifier.padding(top = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        uiState.categories.take(5).forEach { cat ->
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(8.dp)
-                                                    .clip(CircleShape)
-                                                    .background(cat.color)
-                                            )
-                                        }
-                                        Text(
-                                            text = "${uiState.categories.size} Active",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(start = 4.dp)
-                                        )
-                                    }
+                                    Text(
+                                        text = "${uiState.categories.size} Active Categories",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
                                 }
                             }
 
@@ -594,26 +579,6 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Clear All Ledger & Balance")
                 }
-
-                TextButton(
-                    onClick = { showRestoreConfirmDialog = true },
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("restore_demo_data_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Sync,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Load Demo Sample Data",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
     }
@@ -643,39 +608,6 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showResetConfirmDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = RoundedCornerShape(24.dp)
-        )
-    }
-
-    if (showRestoreConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestoreConfirmDialog = false },
-            title = {
-                Text("Load Demo Sample Data?", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
-            },
-            text = {
-                Text(
-                    "This will populate the database with realistic sample transactions and bi-weekly paychecks so you can explore all features of the app.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRestoreConfirmDialog = false
-                        onRestoreDemoData()
-                    }
-                ) {
-                    Text("Load Sample Data", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRestoreConfirmDialog = false }) {
                     Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },

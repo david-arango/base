@@ -21,10 +21,10 @@ data class TransactionEntity(
 data class IncomeEngineEntity(
     @PrimaryKey
     val id: Int = 1,
-    val expectedIncome: Double = 2100.0,
+    val expectedIncome: Double = 0.0,
     val cadence: String = "Bi-Weekly",
-    val nextPaydayTimestamp: Long = System.currentTimeMillis() + (3L * 24 * 60 * 60 * 1000),
-    val isActive: Boolean = true
+    val nextPaydayTimestamp: Long = System.currentTimeMillis() + (14L * 24 * 60 * 60 * 1000),
+    val isActive: Boolean = false
 )
 
 @Entity(tableName = "app_preferences")

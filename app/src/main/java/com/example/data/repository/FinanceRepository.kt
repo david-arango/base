@@ -103,6 +103,15 @@ class FinanceRepository(
             dao.clearAllTransactions()
             dao.setPreference(AppPreferenceEntity("starting_balance_offset", "0.0"))
             dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
+            dao.setIncomeEngineConfig(
+                IncomeEngineEntity(
+                    id = 1,
+                    expectedIncome = 0.0,
+                    cadence = "Bi-Weekly",
+                    nextPaydayTimestamp = System.currentTimeMillis() + (14L * 24 * 60 * 60 * 1000),
+                    isActive = false
+                )
+            )
         }
     }
 

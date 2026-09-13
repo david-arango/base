@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32">
+    <!-- Clean organic circular container -->
+    <path
+        android:fillColor="#3A5A40"
+        android:pathData="M16,0C7.16,0 0,7.16 0,16s7.16,16 16,16 16,-7.16 16,-16S24.84,0 16,0z" />
+    <!-- Sage balance circle -->
+    <path
+        android:fillColor="#A3B18A"
+        android:pathData="M16,7a5,5 0 1,0 0.001,10.001A5,5 0 0,0 16,7z" />
+    <!-- White grounded baseline pill -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,20h12a2,2 0 0,1 2,2a2,2 0 0,1 -2,2h-12a2,2 0 0,1 -2,-2a2,2 0 0,1 2,-2z" />
+</vector>

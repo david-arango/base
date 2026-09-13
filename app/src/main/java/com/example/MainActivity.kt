@@ -181,8 +181,8 @@ fun BaseApp(
             isOpen = isNewTxOpen,
             categories = uiState.categories,
             onDismiss = { viewModel.closeNewTransactionSheet() },
-            onSave = { title, category, amount, isExpense, note ->
-                viewModel.addTransaction(title, category, amount, isExpense, note)
+            onSave = { title, category, amount, isExpense, note, timestamp ->
+                viewModel.addTransaction(title, category, amount, isExpense, note, timestamp)
             }
         )
 

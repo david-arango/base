@@ -1,11 +1,13 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,9 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -30,7 +32,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,14 +58,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.CategoryItem
 import com.example.data.model.CategoryVisuals
 import com.example.data.model.DefaultCategories
-import com.example.ui.theme.CalmDividerHairline
-import com.example.ui.theme.CalmNegativeDeep
-import com.example.ui.theme.CalmPrimary
-import com.example.ui.theme.CalmPrimaryContainer
-import com.example.ui.theme.CalmSurfaceContainer
-import com.example.ui.theme.CalmSurfaceContainerHigh
-import com.example.ui.theme.CalmSurfaceContainerLowest
-import com.example.ui.theme.CalmTextMuted
+import java.util.Locale
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,48 +105,32 @@ fun CategoryManagerSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(horizontal = 20.dp, vertical = 4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Category,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Manage Categories",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "${categories.size} categories configured",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                Column {
+                    Text(
+                        text = "MANAGE CATEGORIES",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            letterSpacing = 1.sp,
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Custom Categories",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
 
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.testTag("close_category_manager_btn")
+                    modifier = Modifier.testTag("close_category_sheet_button")
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
@@ -161,9 +140,8 @@ fun CategoryManagerSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Add Category CTA Button
             Button(
                 onClick = { isCreating = true },
                 colors = ButtonDefaults.buttonColors(
@@ -173,6 +151,7 @@ fun CategoryManagerSheet(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(44.dp)
                     .testTag("btn_add_category")
             ) {
                 Icon(
@@ -213,17 +192,18 @@ fun CategoryManagerSheet(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
+                                // Monochromatic icon container (no rainbow colors)
                                 Box(
                                     modifier = Modifier
                                         .size(38.dp)
                                         .clip(CircleShape)
-                                        .background(category.color.copy(alpha = 0.2f)),
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = category.icon,
                                         contentDescription = null,
-                                        tint = category.color,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -305,12 +285,11 @@ fun CategoryManagerSheet(
             title = "New Category",
             initialName = "",
             initialIconKey = "shopping_bag",
-            initialColorHex = 0xFF5B604BL,
             confirmButtonText = "Create Category",
             confirmButtonTag = "save_category_button",
             onDismiss = { isCreating = false },
-            onConfirm = { name, iconKey, colorHex ->
-                onCreateCategory(name, iconKey, colorHex)
+            onConfirm = { name, iconKey ->
+                onCreateCategory(name, iconKey, 0xFF5B604BL)
                 isCreating = false
             }
         )
@@ -323,12 +302,11 @@ fun CategoryManagerSheet(
             title = "Edit Category",
             initialName = cat.name,
             initialIconKey = cat.iconKey,
-            initialColorHex = cat.color.value.toLong(),
             confirmButtonText = "Save Changes",
             confirmButtonTag = "update_category_button",
             onDismiss = { editingCategory = null },
-            onConfirm = { name, iconKey, colorHex ->
-                onUpdateCategory(cat.dbId, name, iconKey, colorHex, cat.name)
+            onConfirm = { name, iconKey ->
+                onUpdateCategory(cat.dbId, name, iconKey, 0xFF5B604BL, cat.name)
                 editingCategory = null
             }
         )
@@ -382,20 +360,19 @@ fun CategoryManagerSheet(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CategoryEditorDialog(
     title: String,
     initialName: String = "",
     initialIconKey: String = "category",
-    initialColorHex: Long = 0xFF5B604BL,
     confirmButtonText: String,
     confirmButtonTag: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, iconKey: String, colorHex: Long) -> Unit
+    onConfirm: (name: String, iconKey: String) -> Unit
 ) {
     var name by remember { mutableStateOf(initialName) }
     var selectedIconKey by remember { mutableStateOf(initialIconKey) }
-    var selectedColorHex by remember { mutableStateOf(initialColorHex) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -407,9 +384,12 @@ fun CategoryEditorDialog(
             )
         },
         text = {
+            val scrollState = rememberScrollState()
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 OutlinedTextField(
                     value = name,
@@ -432,28 +412,28 @@ fun CategoryEditorDialog(
                         .testTag("category_name_input")
                 )
 
-                // Icon Selection
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Icon Selection (Icons Only - No Color Picking)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Choose Icon",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    val iconScroll = rememberScrollState()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(iconScroll),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        maxItemsInEachRow = 5
                     ) {
                         CategoryVisuals.iconOptions.forEach { (iconKey, vector) ->
                             val isSelected = selectedIconKey == iconKey
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(12.dp))
                                     .background(
-                                        if (isSelected) Color(selectedColorHex)
+                                        if (isSelected) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.surfaceContainerHigh
                                     )
                                     .clickable { selectedIconKey = iconKey }
@@ -463,48 +443,10 @@ fun CategoryEditorDialog(
                                 Icon(
                                     imageVector = vector,
                                     contentDescription = iconKey,
-                                    tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(22.dp)
+                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(24.dp)
                                 )
-                            }
-                        }
-                    }
-                }
-
-                // Color Selection
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "Choose Color",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    val colorScroll = rememberScrollState()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(colorScroll),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        CategoryVisuals.colorOptions.forEach { color ->
-                            val colorLong = color.value.toLong()
-                            val isSelected = selectedColorHex == colorLong
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .clickable { selectedColorHex = colorLong }
-                                    .testTag("color_choice_$colorLong"),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = "Selected",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
                             }
                         }
                     }
@@ -513,7 +455,7 @@ fun CategoryEditorDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name.trim(), selectedIconKey, selectedColorHex) },
+                onClick = { onConfirm(name.trim(), selectedIconKey) },
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -547,7 +489,11 @@ fun StartingBalanceDialog(
 ) {
     if (!isOpen) return
 
-    var offsetText by remember { mutableStateOf(if (currentOffset == 0.0) "0.00" else String.format("%.2f", currentOffset)) }
+    var rawAmount by remember(currentOffset) {
+        val absVal = abs(currentOffset)
+        mutableStateOf(if (absVal == 0.0) "" else String.format(Locale.US, "%.2f", absVal))
+    }
+    var isNegative by remember(currentOffset) { mutableStateOf(currentOffset < 0) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -574,9 +520,8 @@ fun StartingBalanceDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -600,49 +545,138 @@ fun StartingBalanceDialog(
             Text(
                 text = "Calibrate your perpetual rolling balance with an initial opening amount from your existing accounts.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
             )
 
-            OutlinedTextField(
-                value = offsetText,
-                onValueChange = { offsetText = it },
-                label = { Text("Offset Amount ($)") },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                ),
-                modifier = Modifier.fillMaxWidth().testTag("starting_balance_input")
-            )
+            // Positive / Negative balance toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(9999.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(9999.dp))
+                        .background(if (!isNegative) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { isNegative = false }
+                        .padding(vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+ Positive Balance",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = if (!isNegative) FontWeight.SemiBold else FontWeight.Medium
+                        ),
+                        color = if (!isNegative) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(9999.dp))
+                        .background(if (isNegative) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { isNegative = true }
+                        .padding(vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "- Negative Balance",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = if (isNegative) FontWeight.SemiBold else FontWeight.Medium
+                        ),
+                        color = if (isNegative) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Hero Typographic Amount Display
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp)
+                    .testTag("starting_balance_input"),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isNegative) "-$" else "+$",
+                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (rawAmount.isEmpty()) "0.00" else rawAmount,
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-1).sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.testTag("starting_balance_display")
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                TextButton(onClick = onDismiss) {
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+
                 Button(
                     onClick = {
-                        val parsed = offsetText.toDoubleOrNull() ?: 0.0
-                        onConfirm(parsed)
+                        val parsed = rawAmount.toDoubleOrNull() ?: 0.0
+                        onConfirm(if (isNegative) -parsed else parsed)
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(2f)
+                        .height(46.dp)
+                        .testTag("save_starting_balance_btn")
                 ) {
                     Text("Save Offset")
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Number Keyboard (like in new transaction)
+            NumericKeypad(
+                onDigitClick = { digit ->
+                    if (rawAmount.length < 10) {
+                        if (rawAmount.contains(".")) {
+                            val decimals = rawAmount.substringAfter(".")
+                            if (decimals.length < 2) {
+                                rawAmount += digit
+                            }
+                        } else {
+                            rawAmount += digit
+                        }
+                    }
+                },
+                onDecimalClick = {
+                    if (!rawAmount.contains(".")) {
+                        rawAmount = if (rawAmount.isEmpty()) "0." else "$rawAmount."
+                    }
+                },
+                onBackspaceClick = {
+                    if (rawAmount.isNotEmpty()) {
+                        rawAmount = rawAmount.dropLast(1)
+                    }
+                }
+            )
         }
     }
 }
