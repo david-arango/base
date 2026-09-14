@@ -1,10 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,9 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
@@ -34,10 +29,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Keyboard
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +41,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -64,11 +57,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -210,6 +204,8 @@ fun NewTransactionSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .imePadding()
                 .navigationBarsPadding()
         ) {
             // Header Row: Close, Title, Delete (if editing), Expense/Income Toggle
@@ -377,53 +373,65 @@ fun NewTransactionSheet(
                     }
                 }
 
-                // Massive Typographic Amount Display with Blinking Cursor
-                val infiniteTransition = rememberInfiniteTransition(label = "cursor_blink")
-                val cursorAlpha by infiniteTransition.animateFloat(
-                    initialValue = 1f,
-                    targetValue = 0f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(500),
-                        repeatMode = RepeatMode.Reverse
+                // Amount Input Field handled by Android Keyboard
+                OutlinedTextField(
+                    value = rawAmount,
+                    onValueChange = { input ->
+                        val clean = input.filter { it.isDigit() || it == '.' }
+                        if (clean.count { it == '.' } <= 1) {
+                            val parts = clean.split(".")
+                            if (parts.size <= 1 || parts[1].length <= 2) {
+                                if (clean.length <= 10) {
+                                    rawAmount = clean
+                                }
+                            }
+                        }
+                    },
+                    label = {
+                        Text(
+                            text = if (isExpense) "Expense Amount" else "Income Amount",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    leadingIcon = {
+                        Text(
+                            text = if (isExpense) "-$" else "+$",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = if (isExpense) CalmTerracotta else CalmPositiveDeep,
+                            modifier = Modifier.padding(start = 12.dp, end = 4.dp)
+                        )
+                    },
+                    placeholder = {
+                        Text(
+                            text = "0.00",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     ),
-                    label = "cursor_alpha"
-                )
-
-                Row(
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Next
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = if (isExpense) CalmTerracotta else CalmPositiveDeep,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedLabelColor = if (isExpense) CalmTerracotta else CalmPositiveDeep
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isExpense) "-$" else "+$",
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = if (isExpense) CalmTerracotta else CalmPositiveDeep
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (rawAmount.isEmpty()) "0.00" else rawAmount,
-                        style = MaterialTheme.typography.displayMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-1).sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.testTag("display_amount_text")
-                    )
-                    // Active Pulsing Cursor
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 2.dp)
-                            .width(2.5.dp)
-                            .height(30.dp)
-                            .alpha(cursorAlpha)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f))
-                    )
-                }
+                        .padding(vertical = 8.dp)
+                        .testTag("display_amount_text")
+                )
 
                 // Horizontal Category Chips
                 val scrollState = rememberScrollState()
@@ -512,6 +520,10 @@ fun NewTransactionSheet(
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                         ),
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Done
+                        ),
                         modifier = Modifier
                             .weight(1f)
                             .testTag("note_input_field")
@@ -603,167 +615,7 @@ fun NewTransactionSheet(
                 }
             }
 
-            // Realistic Touch Numeric Keypad
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    // Mini Gboard header
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Keyboard,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Text(
-                                text = "Google Keyboard",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Translate,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Icon(
-                                imageVector = Icons.Filled.Mic,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Icon(
-                                imageVector = Icons.Filled.MoreHoriz,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                    }
-
-                    // Keypad rows
-                    val keyRows = listOf(
-                        listOf(Pair("1", ""), Pair("2", "abc"), Pair("3", "def")),
-                        listOf(Pair("4", "ghi"), Pair("5", "jkl"), Pair("6", "mno")),
-                        listOf(Pair("7", "pqrs"), Pair("8", "tuv"), Pair("9", "wxyz")),
-                        listOf(Pair(".", ""), Pair("0", ""), Pair("backspace", ""))
-                    )
-
-                    keyRows.forEach { rowKeys ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            rowKeys.forEach { (primary, sub) ->
-                                val isAction = primary == "." || primary == "backspace"
-                                Surface(
-                                    color = if (isAction) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerLowest,
-                                    shape = RoundedCornerShape(8.dp),
-                                    shadowElevation = 1.dp,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(44.dp)
-                                        .clickable {
-                                            when (primary) {
-                                                "backspace" -> {
-                                                    if (rawAmount.isNotEmpty()) {
-                                                        rawAmount = rawAmount.dropLast(1)
-                                                    }
-                                                }
-                                                "." -> {
-                                                    if (!rawAmount.contains(".")) {
-                                                        rawAmount = if (rawAmount.isEmpty()) "0." else "$rawAmount."
-                                                    }
-                                                }
-                                                else -> {
-                                                    if (rawAmount == "0") {
-                                                        rawAmount = primary
-                                                    } else {
-                                                        val parts = rawAmount.split(".")
-                                                        if (parts.size <= 1 || parts[1].length < 2) {
-                                                            if (rawAmount.length < 8) {
-                                                                rawAmount += primary
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        .testTag("keypad_key_${if (primary == ".") "dot" else primary}")
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.padding(2.dp)
-                                    ) {
-                                        if (primary == "backspace") {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.Backspace,
-                                                contentDescription = "Backspace",
-                                                tint = MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier.size(19.dp)
-                                            )
-                                        } else if (sub.isNotEmpty()) {
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.Center
-                                            ) {
-                                                Text(
-                                                    text = primary,
-                                                    style = MaterialTheme.typography.titleLarge.copy(
-                                                        fontSize = 18.sp,
-                                                        fontWeight = FontWeight.Medium
-                                                    ),
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Text(
-                                                    text = sub,
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Normal
-                                                    ),
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        } else {
-                                            Text(
-                                                text = primary,
-                                                style = MaterialTheme.typography.titleLarge.copy(
-                                                    fontSize = if (primary == ".") 22.sp else 18.sp,
-                                                    fontWeight = if (primary == ".") FontWeight.Bold else FontWeight.Medium
-                                                ),
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 

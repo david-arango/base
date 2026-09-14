@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -35,6 +36,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,6 +54,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.IncomeEngineEntity
@@ -83,7 +88,6 @@ fun IncomeEngineSheet(
     var selectedCadence by remember(currentConfig) { mutableStateOf(currentConfig.cadence) }
     var nextPaydayTimestamp by remember(currentConfig) { mutableStateOf(currentConfig.nextPaydayTimestamp) }
 
-    var showIncomeKeypadModal by remember { mutableStateOf(false) }
     var showPaydayDatePicker by remember { mutableStateOf(false) }
 
     val formattedDate = remember(nextPaydayTimestamp) {
@@ -237,38 +241,51 @@ fun IncomeEngineSheet(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Interactive Amount Box triggering number keyboard
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        // Expected Income Input Field handled by Android Keyboard
+                        OutlinedTextField(
+                            value = amountText,
+                            onValueChange = { input ->
+                                val digits = input.filter { it.isDigit() }
+                                if (digits.length <= 8) {
+                                    val num = digits.toLongOrNull()
+                                    amountText = if (num != null && num > 0) String.format(Locale.US, "%,d", num) else digits
+                                }
+                            },
+                            label = { Text("Expected Amount") },
+                            leadingIcon = {
+                                Text(
+                                    text = "$",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(start = 12.dp, end = 4.dp)
+                                )
+                            },
+                            placeholder = {
+                                Text(
+                                    "0",
+                                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                            },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                .clickable { showIncomeKeypadModal = true }
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .padding(vertical = 4.dp)
                                 .testTag("expected_income_input")
-                        ) {
-                            Text(
-                                text = "$",
-                                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (amountText.isNotBlank()) amountText else "Tap to enter amount",
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (amountText.isNotBlank()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Icon(
-                                imageVector = Icons.Filled.Edit,
-                                contentDescription = "Enter Expected Income",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        )
 
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
@@ -541,103 +558,6 @@ fun IncomeEngineSheet(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-
-    // Number keyboard popup modal (like in new transaction)
-    if (showIncomeKeypadModal) {
-        ModalBottomSheet(
-            onDismissRequest = { showIncomeKeypadModal = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Expected Income Amount",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    IconButton(onClick = { showIncomeKeypadModal = false }) {
-                        Icon(Icons.Filled.Close, contentDescription = "Close")
-                    }
-                }
-
-                // Typographic display
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 14.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "$",
-                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (amountText.isEmpty()) "0" else amountText,
-                        style = MaterialTheme.typography.displayMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-1).sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.testTag("income_keypad_amount_display")
-                    )
-                }
-
-                Button(
-                    onClick = { showIncomeKeypadModal = false },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                        .testTag("done_income_keypad_btn"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Done", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                NumericKeypad(
-                    onDigitClick = { digit ->
-                        val current = amountText.filter { it.isDigit() }
-                        if (current.length < 8) {
-                            val newStr = if (current == "0") digit else current + digit
-                            val num = newStr.toLongOrNull() ?: 0L
-                            amountText = String.format(Locale.US, "%,d", num)
-                        }
-                    },
-                    onDecimalClick = { /* whole dollar input for income */ },
-                    onBackspaceClick = {
-                        val current = amountText.filter { it.isDigit() }
-                        if (current.isNotEmpty()) {
-                            val dropped = current.dropLast(1)
-                            amountText = if (dropped.isNotEmpty()) {
-                                val num = dropped.toLongOrNull() ?: 0L
-                                String.format(Locale.US, "%,d", num)
-                            } else {
-                                ""
-                            }
-                        }
-                    }
-                )
-            }
         }
     }
 

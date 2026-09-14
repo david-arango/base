@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -53,6 +55,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CategoryItem
@@ -594,31 +598,61 @@ fun StartingBalanceDialog(
                 }
             }
 
-            // Hero Typographic Amount Display
-            Row(
+            // Offset Amount Input Field handled by Android Keyboard
+            OutlinedTextField(
+                value = rawAmount,
+                onValueChange = { input ->
+                    val clean = input.filter { it.isDigit() || it == '.' }
+                    if (clean.count { it == '.' } <= 1) {
+                        val parts = clean.split(".")
+                        if (parts.size <= 1 || parts[1].length <= 2) {
+                            if (clean.length <= 10) {
+                                rawAmount = clean
+                            }
+                        }
+                    }
+                },
+                label = { Text("Starting Balance") },
+                leadingIcon = {
+                    Text(
+                        text = if (isNegative) "-$" else "+$",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 12.dp, end = 4.dp)
+                    )
+                },
+                placeholder = {
+                    Text(
+                        "0.00",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        val parsed = rawAmount.toDoubleOrNull() ?: 0.0
+                        onConfirm(if (isNegative) -parsed else parsed)
+                    }
+                ),
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp)
-                    .testTag("starting_balance_input"),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (isNegative) "-$" else "+$",
-                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = if (rawAmount.isEmpty()) "0.00" else rawAmount,
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-1).sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.testTag("starting_balance_display")
-                )
-            }
+                    .testTag("starting_balance_display")
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -649,34 +683,6 @@ fun StartingBalanceDialog(
                     Text("Save Offset")
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Number Keyboard (like in new transaction)
-            NumericKeypad(
-                onDigitClick = { digit ->
-                    if (rawAmount.length < 10) {
-                        if (rawAmount.contains(".")) {
-                            val decimals = rawAmount.substringAfter(".")
-                            if (decimals.length < 2) {
-                                rawAmount += digit
-                            }
-                        } else {
-                            rawAmount += digit
-                        }
-                    }
-                },
-                onDecimalClick = {
-                    if (!rawAmount.contains(".")) {
-                        rawAmount = if (rawAmount.isEmpty()) "0." else "$rawAmount."
-                    }
-                },
-                onBackspaceClick = {
-                    if (rawAmount.isNotEmpty()) {
-                        rawAmount = rawAmount.dropLast(1)
-                    }
-                }
-            )
         }
     }
 }

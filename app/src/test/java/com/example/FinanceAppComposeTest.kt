@@ -113,9 +113,8 @@ class FinanceAppComposeTest {
         composeTestRule.onNodeWithTag("fab_add_transaction").performClick()
         composeTestRule.waitForIdle()
 
-        // Enter amount 25 using numeric keypad
-        composeTestRule.onNodeWithTag("keypad_key_2").performClick()
-        composeTestRule.onNodeWithTag("keypad_key_5").performClick()
+        // Enter amount 25 using native text input
+        composeTestRule.onNodeWithTag("display_amount_text").performTextInput("25")
         composeTestRule.waitForIdle()
 
         // Select Dining Out category chip if present
@@ -204,10 +203,10 @@ class FinanceAppComposeTest {
         composeTestRule.onNodeWithTag("settings_starting_balance_row").performClick()
 
         // Verify dialog / sheet
-        composeTestRule.onNodeWithTag("starting_balance_input").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("starting_balance_display").assertIsDisplayed()
 
         // Dismiss sheet
-        composeTestRule.onNodeWithContentDescription("Cancel").performClick()
+        composeTestRule.onNodeWithText("Cancel").performClick()
         composeTestRule.waitForIdle()
 
         // Starting balance row should be visible
@@ -298,7 +297,7 @@ class FinanceAppComposeTest {
     }
 
     @Test
-    fun startingBalanceDialog_keypadInputAndConfirmation() {
+    fun startingBalanceDialog_inputAndConfirmation() {
         var confirmedValue: Double? = null
         var dismissed = false
 
@@ -314,16 +313,10 @@ class FinanceAppComposeTest {
         }
         composeTestRule.waitForIdle()
 
-        // Verify keypad and display exist
+        // Verify input exists and enter 75.5
         composeTestRule.onNodeWithTag("starting_balance_display").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("keypad_key_7").performClick()
-        composeTestRule.onNodeWithTag("keypad_key_5").performClick()
-        composeTestRule.onNodeWithTag("keypad_key_dot").performClick()
-        composeTestRule.onNodeWithTag("keypad_key_5").performClick()
+        composeTestRule.onNodeWithTag("starting_balance_display").performTextInput("75.5")
         composeTestRule.waitForIdle()
-
-        // Verify display shows 75.5
-        composeTestRule.onNodeWithText("75.5").assertIsDisplayed()
 
         // Toggle to negative balance
         composeTestRule.onNodeWithText("- Negative Balance").performClick()
@@ -337,31 +330,34 @@ class FinanceAppComposeTest {
     }
 
     @Test
-    fun numericKeypad_directComponentClicks() {
-        var clickedDigits = ""
-        var decimalClicked = false
-        var backspaceCount = 0
+    fun newTransactionSheet_textInputHandling() {
+        var savedAmount: Double? = null
+        var savedNote: String? = null
 
         composeTestRule.setContent {
             MyApplicationTheme {
-                com.example.ui.components.NumericKeypad(
-                    onDigitClick = { clickedDigits += it },
-                    onDecimalClick = { decimalClicked = true },
-                    onBackspaceClick = { backspaceCount++ }
+                NewTransactionSheet(
+                    isOpen = true,
+                    onDismiss = {},
+                    onSave = { _, _, amount, _, note, _ ->
+                        savedAmount = amount
+                        savedNote = note
+                    }
                 )
             }
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithTag("keypad_key_1").performClick()
-        composeTestRule.onNodeWithTag("keypad_key_2").performClick()
-        composeTestRule.onNodeWithTag("keypad_key_3").performClick()
-        composeTestRule.onNodeWithTag("keypad_key_dot").performClick()
-        composeTestRule.onNodeWithTag("keypad_key_backspace").performClick()
+        // Enter amount and note using native text fields
+        composeTestRule.onNodeWithTag("display_amount_text").performTextInput("42.50")
+        composeTestRule.onNodeWithTag("note_input_field").performTextInput("Coffee run")
+        composeTestRule.waitForIdle()
 
-        assertEquals("123", clickedDigits)
-        assertTrue(decimalClicked)
-        assertEquals(1, backspaceCount)
+        composeTestRule.onNodeWithTag("save_transaction_button").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(42.50, savedAmount!!, 0.001)
+        assertEquals("Coffee run", savedNote)
     }
 
     @Test
