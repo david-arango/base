@@ -1,4 +1,7 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 plugins {
   alias(libs.plugins.android.application)
@@ -9,6 +12,42 @@ plugins {
   alias(libs.plugins.google.services)
 }
 
+val versionPropsFile = rootProject.file("version.properties")
+
+fun getOrUpdateVersion(): Triple<Int, Int, Int> {
+  val props = Properties()
+  if (versionPropsFile.exists()) {
+    FileInputStream(versionPropsFile).use { props.load(it) }
+  }
+  val major = (props.getProperty("major") ?: "1").toIntOrNull() ?: 1
+  val minor = (props.getProperty("minor") ?: "0").toIntOrNull() ?: 0
+  val currentBuild = (props.getProperty("build") ?: "0").toIntOrNull() ?: 0
+
+  val taskNames = gradle.startParameter.taskNames
+  val isNonBuildTask = taskNames.any {
+    it.equals("tasks", ignoreCase = true) ||
+    it.equals("help", ignoreCase = true) ||
+    it.contains("dependencies", ignoreCase = true)
+  }
+
+  val newBuild = if (!isNonBuildTask) currentBuild + 1 else currentBuild
+
+  if (!isNonBuildTask || !versionPropsFile.exists()) {
+    props.setProperty("major", major.toString())
+    props.setProperty("minor", minor.toString())
+    props.setProperty("build", newBuild.toString())
+    FileOutputStream(versionPropsFile).use {
+      props.store(it, "Build Version Properties")
+    }
+  }
+
+  return Triple(major, minor, newBuild)
+}
+
+val (majorVersion, minorVersion, buildCounter) = getOrUpdateVersion()
+val computedVersionName = "v$majorVersion.$minorVersion.$buildCounter"
+val computedVersionCode = if (buildCounter > 0) buildCounter else 1
+
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -17,8 +56,12 @@ android {
     applicationId = "com.aistudio.calmfinance.bsemvp"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = computedVersionCode
+    versionName = computedVersionName
+
+    buildConfigField("int", "BUILD_COUNTER", "$buildCounter")
+    buildConfigField("int", "MAJOR_VERSION", "$majorVersion")
+    buildConfigField("int", "MINOR_VERSION", "$minorVersion")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
