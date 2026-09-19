@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -377,6 +378,7 @@ fun CategoryEditorDialog(
 ) {
     var name by remember { mutableStateOf(initialName) }
     var selectedIconKey by remember { mutableStateOf(initialIconKey) }
+    var hasManuallyPickedIcon by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -397,7 +399,14 @@ fun CategoryEditorDialog(
             ) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { newName ->
+                        name = newName
+                        if (!hasManuallyPickedIcon) {
+                            CategoryVisuals.findMatchingIconKey(newName)?.let { matchedKey ->
+                                selectedIconKey = matchedKey
+                            }
+                        }
+                    },
                     label = { Text("Category Name") },
                     placeholder = { Text("e.g. Subscriptions") },
                     singleLine = true,
@@ -416,41 +425,71 @@ fun CategoryEditorDialog(
                         .testTag("category_name_input")
                 )
 
-                // Icon Selection (Icons Only - No Color Picking)
+                // Icon Selection with Selected Indicator
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Choose Icon",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    FlowRow(
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        maxItemsInEachRow = 5
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CategoryVisuals.iconOptions.forEach { (iconKey, vector) ->
-                            val isSelected = selectedIconKey == iconKey
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.surfaceContainerHigh
+                        Text(
+                            text = "Choose Icon",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = CategoryVisuals.getIcon(selectedIconKey),
+                                contentDescription = "Selected icon",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 240.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            maxItemsInEachRow = 5
+                        ) {
+                            CategoryVisuals.iconOptions.forEach { (iconKey, vector) ->
+                                val isSelected = selectedIconKey == iconKey
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.surfaceContainerHigh
+                                        )
+                                        .clickable {
+                                            selectedIconKey = iconKey
+                                            hasManuallyPickedIcon = true
+                                        }
+                                        .testTag("icon_choice_$iconKey"),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = vector,
+                                        contentDescription = CategoryVisuals.getIconLabel(iconKey),
+                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(24.dp)
                                     )
-                                    .clickable { selectedIconKey = iconKey }
-                                    .testTag("icon_choice_$iconKey"),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = vector,
-                                    contentDescription = iconKey,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                }
                             }
                         }
                     }
