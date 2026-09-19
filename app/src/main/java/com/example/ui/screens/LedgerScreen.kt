@@ -463,13 +463,17 @@ fun TransactionItemRow(
         DefaultCategories.getCategoryByName(transaction.category, categories)
     }
 
-    val timeFormatted = remember(transaction.timestamp) {
-        val sdf = SimpleDateFormat("h:mm a", Locale.US)
-        sdf.format(Date(transaction.timestamp))
-    }
-
     val isExpense = transaction.isExpense
     val isIncomeHighlight = !isExpense && transaction.isAuto
+
+    val hasNote = transaction.note.isNotBlank() || (transaction.title.isNotBlank() && !transaction.title.equals(transaction.category, ignoreCase = true))
+    val entryTitle = if (transaction.note.isNotBlank()) {
+        transaction.note
+    } else if (transaction.title.isNotBlank() && !transaction.title.equals(transaction.category, ignoreCase = true)) {
+        transaction.title
+    } else {
+        transaction.category
+    }
 
     Row(
         modifier = Modifier
@@ -509,7 +513,7 @@ fun TransactionItemRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = transaction.title,
+                        text = entryTitle,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = if (isIncomeHighlight) FontWeight.SemiBold else FontWeight.Medium
                         ),
@@ -533,14 +537,8 @@ fun TransactionItemRow(
                     }
                 }
 
-                val subtext = if (transaction.note.isNotBlank()) {
-                    "${transaction.category} • ${transaction.note}"
-                } else {
-                    "${transaction.category} • $timeFormatted"
-                }
-
                 Text(
-                    text = subtext,
+                    text = transaction.category,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
