@@ -42,6 +42,7 @@ import com.example.ui.components.AppHeader
 import com.example.ui.components.CategoryManagerSheet
 import com.example.ui.components.IncomeEngineSheet
 import com.example.ui.components.NewTransactionSheet
+import com.example.ui.components.OffsetBudgetSheet
 import com.example.ui.components.StartingBalanceDialog
 import com.example.ui.screens.AnalyticsScreen
 import com.example.ui.screens.LedgerScreen
@@ -84,11 +85,33 @@ fun BaseApp(
     val isStartingBalanceOpen by viewModel.isStartingBalanceDialogOpen.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
 
+    // Check for any pending scheduled income when app is resumed
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.checkRecurringIncomeTriggers()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     // Auto-dismiss toast
     LaunchedEffect(toastMessage) {
         if (toastMessage != null) {
             delay(2800)
             viewModel.clearToast()
+        }
+    }
+
+    // Periodically check for scheduled recurring income while the UI is active
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000L)
+            viewModel.checkRecurringIncomeTriggers()
         }
     }
 
@@ -210,6 +233,9 @@ fun BaseApp(
             onDismiss = { viewModel.closeIncomeEngine() },
             onSave = { expectedIncome, cadence, nextDate ->
                 viewModel.updateIncomeEngine(expectedIncome, cadence, nextDate)
+            },
+            onTriggerNow = {
+                viewModel.triggerIncomeNow()
             }
         )
 
@@ -228,12 +254,16 @@ fun BaseApp(
             }
         )
 
-        StartingBalanceDialog(
+        OffsetBudgetSheet(
             isOpen = isStartingBalanceOpen,
             currentOffset = uiState.startingBalanceOffset,
+            offsetTransactions = uiState.offsetTransactions,
             onDismiss = { viewModel.closeStartingBalanceDialog() },
-            onConfirm = { newOffset ->
-                viewModel.updateStartingBalanceOffset(newOffset)
+            onAddOffset = { amount, note ->
+                viewModel.addOffsetTransaction(amount, note)
+            },
+            onDeleteOffset = { id ->
+                viewModel.deleteOffsetTransaction(id)
             }
         )
     }

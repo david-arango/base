@@ -1,7 +1,10 @@
 package com.example
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -9,12 +12,14 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import com.example.data.local.OffsetTransactionEntity
 import com.example.data.local.TransactionEntity
 import com.example.data.model.DefaultCategories
 import com.example.ui.FinanceUiState
 import com.example.ui.components.CategoryEditorDialog
 import com.example.ui.components.CategoryManagerSheet
 import com.example.ui.components.NewTransactionSheet
+import com.example.ui.components.OffsetBudgetSheet
 import com.example.ui.screens.LedgerScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -519,5 +524,100 @@ class FinanceAppComposeTest {
         composeTestRule.onNodeWithTag("ledger_confirm_delete_btn").performClick()
         composeTestRule.waitForIdle()
         assertEquals(101L, deletedId)
+    }
+
+    @Test
+    fun offsetBudgetSheet_multipleOffsetsDisplayedAndHandled() {
+        val testOffsets = listOf(
+            OffsetTransactionEntity(id = 1, amount = 200.0, note = "Starting Balance", timestamp = System.currentTimeMillis()),
+            OffsetTransactionEntity(id = 2, amount = -50.0, note = "Cash expense", timestamp = System.currentTimeMillis() - 60000)
+        )
+        var addedAmount: Double? = null
+        var addedNote: String? = null
+        var deletedId: Long? = null
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                OffsetBudgetSheet(
+                    isOpen = true,
+                    currentOffset = 150.0,
+                    offsetTransactions = testOffsets,
+                    onDismiss = {},
+                    onAddOffset = { amount, note ->
+                        addedAmount = amount
+                        addedNote = note
+                    },
+                    onDeleteOffset = { id -> deletedId = id }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Both offset rows should be displayed in the list
+        composeTestRule.onNodeWithTag("offset_row_1").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("offset_row_2").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Starting Balance").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Cash expense").assertIsDisplayed()
+
+        // Delete offset 1
+        composeTestRule.onNodeWithTag("delete_offset_btn_1").performClick()
+        assertEquals(1L, deletedId)
+
+        // Add a new positive offset with note
+        composeTestRule.onNodeWithTag("starting_balance_display").performTextInput("75.0")
+        composeTestRule.onNodeWithTag("offset_note_input").performTextInput("Gift money")
+        composeTestRule.onNodeWithTag("save_starting_balance_btn").performClick()
+
+        assertEquals(75.0, addedAmount!!, 0.001)
+        assertEquals("Gift money", addedNote)
+    }
+
+    @Test
+    fun offsetBudgetSheet_negativeOffsetWithToggle() {
+        var addedAmount: Double? = null
+        var addedNote: String? = null
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                OffsetBudgetSheet(
+                    isOpen = true,
+                    currentOffset = 0.0,
+                    offsetTransactions = emptyList(),
+                    onDismiss = {},
+                    onAddOffset = { amount, note ->
+                        addedAmount = amount
+                        addedNote = note
+                    },
+                    onDeleteOffset = {}
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("starting_balance_display").performTextInput("120.50")
+        composeTestRule.onNodeWithText("- Negative Balance").performClick()
+        composeTestRule.onNodeWithTag("save_starting_balance_btn").performClick()
+
+        assertEquals(-120.50, addedAmount!!, 0.001)
+        assertEquals("Offset adjustment", addedNote)
+    }
+
+    @Test
+    fun settingsScreen_restoreDemoDataIsHidden() {
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                BaseApp()
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("nav_tab_settings").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify Settings screen is displayed
+        composeTestRule.onNodeWithTag("settings_income_engine_row").assertIsDisplayed()
+        // Verify Restore Demo Data option is hidden from Settings
+        composeTestRule.onAllNodesWithTag("settings_restore_demo_row").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Restore Demo Data").assertCountEquals(0)
     }
 }

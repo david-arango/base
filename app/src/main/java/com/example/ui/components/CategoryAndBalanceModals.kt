@@ -31,10 +31,12 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,9 +62,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.local.OffsetTransactionEntity
 import com.example.data.model.CategoryItem
 import com.example.data.model.CategoryVisuals
 import com.example.data.model.DefaultCategories
+import com.example.ui.theme.CalmNegativeDeep
+import com.example.ui.theme.CalmPositiveDeep
+import com.example.ui.theme.CalmSageSubtle
+import com.example.ui.theme.CalmTerracottaSubtle
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
@@ -524,19 +533,21 @@ fun CategoryEditorDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StartingBalanceDialog(
+fun OffsetBudgetSheet(
     isOpen: Boolean,
     currentOffset: Double,
+    offsetTransactions: List<OffsetTransactionEntity> = emptyList(),
     onDismiss: () -> Unit,
-    onConfirm: (Double) -> Unit
+    onAddOffset: (Double, String) -> Unit,
+    onDeleteOffset: (Long) -> Unit
 ) {
     if (!isOpen) return
 
-    var rawAmount by remember(currentOffset) {
-        val absVal = abs(currentOffset)
-        mutableStateOf(if (absVal == 0.0) "" else String.format(Locale.US, "%.2f", absVal))
-    }
-    var isNegative by remember(currentOffset) { mutableStateOf(currentOffset < 0) }
+    var rawAmount by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+    var isNegative by remember { mutableStateOf(false) }
+
+    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.US) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -564,6 +575,7 @@ fun StartingBalanceDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 6.dp)
         ) {
             Row(
@@ -571,28 +583,105 @@ fun StartingBalanceDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Starting Balance Offset",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Tune,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Text(
+                        text = "Offset Budget",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Cancel",
+                        contentDescription = "Close",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
             Text(
-                text = "Calibrate your perpetual rolling balance with an initial opening amount from your existing accounts.",
+                text = "Add invisible offset transactions that adjust your current balance up or down. These adjustments do not appear in your ledger or analytics.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
             )
 
-            // Positive / Negative balance toggle
+            // Current Total Offset Summary Card
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "CURRENT NET OFFSET",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        val offsetSign = if (currentOffset > 0) "+" else if (currentOffset < 0) "-" else ""
+                        val offsetColor = if (currentOffset > 0) CalmPositiveDeep else if (currentOffset < 0) CalmNegativeDeep else MaterialTheme.colorScheme.onSurface
+                        Text(
+                            text = "$offsetSign$${String.format(Locale.US, "%,.2f", abs(currentOffset))}",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = offsetColor
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(9999.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "${offsetTransactions.size} offset${if (offsetTransactions.size == 1) "" else "s"}",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "NEW OFFSET ADJUSTMENT",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 2.dp, bottom = 6.dp)
+            )
+
+            // Up / Down toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -607,7 +696,7 @@ fun StartingBalanceDialog(
                         .clip(RoundedCornerShape(9999.dp))
                         .background(if (!isNegative) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable { isNegative = false }
-                        .padding(vertical = 6.dp),
+                        .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -624,7 +713,7 @@ fun StartingBalanceDialog(
                         .clip(RoundedCornerShape(9999.dp))
                         .background(if (isNegative) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable { isNegative = true }
-                        .padding(vertical = 6.dp),
+                        .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -637,7 +726,9 @@ fun StartingBalanceDialog(
                 }
             }
 
-            // Offset Amount Input Field handled by Android Keyboard
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Offset Amount Input Field
             OutlinedTextField(
                 value = rawAmount,
                 onValueChange = { input ->
@@ -651,12 +742,12 @@ fun StartingBalanceDialog(
                         }
                     }
                 },
-                label = { Text("Starting Balance") },
+                label = { Text("Adjustment Amount") },
                 leadingIcon = {
                     Text(
                         text = if (isNegative) "-$" else "+$",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (isNegative) CalmNegativeDeep else CalmPositiveDeep,
                         modifier = Modifier.padding(start = 12.dp, end = 4.dp)
                     )
                 },
@@ -674,12 +765,40 @@ fun StartingBalanceDialog(
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("starting_balance_display")
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Optional note
+            OutlinedTextField(
+                value = note,
+                onValueChange = { if (it.length <= 60) note = it },
+                label = { Text("Reason or Note (Optional)") },
+                placeholder = { Text("e.g. Starting balance, Bank discrepancy") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
                         val parsed = rawAmount.toDoubleOrNull() ?: 0.0
-                        onConfirm(if (isNegative) -parsed else parsed)
+                        if (parsed > 0) {
+                            val signed = if (isNegative) -parsed else parsed
+                            val finalNote = note.ifBlank { "Offset adjustment" }
+                            onAddOffset(signed, finalNote)
+                            rawAmount = ""
+                            note = ""
+                        }
                     }
                 ),
                 shape = RoundedCornerShape(14.dp),
@@ -689,9 +808,10 @@ fun StartingBalanceDialog(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
-                    .testTag("starting_balance_display")
+                    .testTag("offset_note_input")
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -707,7 +827,13 @@ fun StartingBalanceDialog(
                 Button(
                     onClick = {
                         val parsed = rawAmount.toDoubleOrNull() ?: 0.0
-                        onConfirm(if (isNegative) -parsed else parsed)
+                        if (parsed > 0.0) {
+                            val signed = if (isNegative) -parsed else parsed
+                            val finalNote = note.ifBlank { "Offset adjustment" }
+                            onAddOffset(signed, finalNote)
+                            rawAmount = ""
+                            note = ""
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -719,9 +845,138 @@ fun StartingBalanceDialog(
                         .height(46.dp)
                         .testTag("save_starting_balance_btn")
                 ) {
-                    Text("Save Offset")
+                    Text("Apply Offset")
                 }
             }
+
+            // Offset Transactions History
+            if (offsetTransactions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(20.dp))
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "RECORDED OFFSETS (${offsetTransactions.size})",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 2.dp, bottom = 8.dp)
+                )
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("offset_transactions_list")
+                ) {
+                    Column {
+                        offsetTransactions.forEachIndexed { index, tx ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("offset_row_${tx.id}")
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    val isPos = tx.amount >= 0
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isPos) CalmSageSubtle else CalmTerracottaSubtle),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = if (isPos) "+" else "-",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = if (isPos) CalmPositiveDeep else CalmNegativeDeep
+                                        )
+                                    }
+
+                                    Column {
+                                        Text(
+                                            text = tx.note.ifBlank { "Offset adjustment" },
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = dateFormat.format(Date(tx.timestamp)),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    val isPos = tx.amount >= 0
+                                    Text(
+                                        text = "${if (isPos) "+" else "-"}$${String.format(Locale.US, "%.2f", abs(tx.amount))}",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = if (isPos) CalmPositiveDeep else CalmNegativeDeep
+                                    )
+
+                                    IconButton(
+                                        onClick = { onDeleteOffset(tx.id) },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .testTag("delete_offset_btn_${tx.id}")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.DeleteOutline,
+                                            contentDescription = "Delete offset",
+                                            tint = CalmNegativeDeep.copy(alpha = 0.8f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (index < offsetTransactions.size - 1) {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    modifier = Modifier.padding(horizontal = 14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StartingBalanceDialog(
+    isOpen: Boolean,
+    currentOffset: Double,
+    onDismiss: () -> Unit,
+    onConfirm: (Double) -> Unit
+) {
+    OffsetBudgetSheet(
+        isOpen = isOpen,
+        currentOffset = currentOffset,
+        offsetTransactions = emptyList(),
+        onDismiss = onDismiss,
+        onAddOffset = { amount, _ -> onConfirm(amount) },
+        onDeleteOffset = {}
+    )
 }

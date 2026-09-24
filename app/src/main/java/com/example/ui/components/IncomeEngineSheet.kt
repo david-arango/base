@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,7 +70,8 @@ fun IncomeEngineSheet(
     isOpen: Boolean,
     currentConfig: IncomeEngineEntity,
     onDismiss: () -> Unit,
-    onSave: (expectedIncome: Double, cadence: String, nextPaydayTimestamp: Long) -> Unit
+    onSave: (expectedIncome: Double, cadence: String, nextPaydayTimestamp: Long) -> Unit,
+    onTriggerNow: (() -> Unit)? = null
 ) {
     if (!isOpen) return
 
@@ -511,6 +513,32 @@ fun IncomeEngineSheet(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+            }
+
+            if (currentConfig.expectedIncome > 0 && onTriggerNow != null) {
+                OutlinedButton(
+                    onClick = onTriggerNow,
+                    shape = RoundedCornerShape(9999.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(bottom = 8.dp)
+                        .testTag("trigger_income_now_button"),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.WaterDrop,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Post Paycheck Now (+$${String.format(Locale.US, "%,.2f", currentConfig.expectedIncome)})",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 

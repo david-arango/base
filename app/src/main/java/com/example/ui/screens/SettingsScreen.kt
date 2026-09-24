@@ -69,10 +69,12 @@ import com.example.ui.theme.CalmSecondaryContainer
 import com.example.ui.theme.CalmSurfaceContainer
 import com.example.ui.theme.CalmSurfaceContainerHigh
 import com.example.ui.theme.CalmSurfaceContainerLowest
+import com.example.ui.theme.CalmTerracottaSubtle
 import com.example.ui.theme.CalmTextMuted
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 @Composable
 fun SettingsScreen(
@@ -83,6 +85,7 @@ fun SettingsScreen(
     onExportCsv: () -> Unit,
     onResetData: () -> Unit,
     onRestoreDemoData: () -> Unit = {},
+    showRestoreDemoData: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showResetConfirmDialog by remember { mutableStateOf(false) }
@@ -298,7 +301,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
-                        // Starting Balance Offset Row
+                        // Offset Budget Row
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -320,7 +323,7 @@ fun SettingsScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Filled.AccountBalance,
+                                        imageVector = Icons.Filled.Tune,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
@@ -328,12 +331,13 @@ fun SettingsScreen(
                                 }
                                 Column {
                                     Text(
-                                        text = "Starting Balance Offset",
+                                        text = "Offset Budget",
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
+                                    val offsetSign = if (uiState.startingBalanceOffset > 0) "+" else if (uiState.startingBalanceOffset < 0) "-" else ""
                                     Text(
-                                        text = String.format(Locale.US, "Current: $%,.2f", uiState.startingBalanceOffset),
+                                        text = String.format(Locale.US, "Current: %s$%,.2f", offsetSign, abs(uiState.startingBalanceOffset)),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -476,6 +480,120 @@ fun SettingsScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                         }
+
+                        if (showRestoreDemoData) {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            // Restore Demo Data Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(onClick = onRestoreDemoData)
+                                    .testTag("settings_restore_demo_row")
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Sync,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Column {
+                                        Text(
+                                            text = "Restore Demo Data",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Reload sample records",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+
+                        // Reset / Clear Data Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = { showResetConfirmDialog = true })
+                                .testTag("reset_data_btn")
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(CalmTerracottaSubtle),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.DeleteSweep,
+                                        contentDescription = null,
+                                        tint = CalmNegativeDeep,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Clear All Ledger & Balance",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                                        color = CalmNegativeDeep
+                                    )
+                                    Text(
+                                        text = "Reset database to $0.00",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                contentDescription = null,
+                                tint = CalmNegativeDeep.copy(alpha = 0.6f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -555,34 +673,6 @@ fun SettingsScreen(
                             }
                         }
                     }
-                }
-            }
-        }
-
-        // Reset / Clear Data Actions
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { showResetConfirmDialog = true },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = CalmNegativeDeep
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("reset_data_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.DeleteSweep,
-                        contentDescription = null,
-                        tint = CalmNegativeDeep,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear All Ledger & Balance")
                 }
             }
         }

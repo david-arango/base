@@ -6,6 +6,7 @@ import com.example.data.local.AppPreferenceEntity
 import com.example.data.local.CategoryEntity
 import com.example.data.local.FinanceDao
 import com.example.data.local.IncomeEngineEntity
+import com.example.data.local.OffsetTransactionEntity
 import com.example.data.local.TransactionEntity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.abs
 
 class FinanceRepository(
     private val context: Context,
@@ -26,10 +28,11 @@ class FinanceRepository(
     val allTransactions: Flow<List<TransactionEntity>> = dao.getAllTransactions()
     val incomeEngineConfig: Flow<IncomeEngineEntity?> = dao.getIncomeEngineConfig()
     val allCategories: Flow<List<CategoryEntity>> = dao.getAllCategories()
+    val allOffsetTransactions: Flow<List<OffsetTransactionEntity>> = dao.getAllOffsetTransactions()
+    val totalOffset: Flow<Double> = dao.getTotalOffsetFlow()
 
-    val startingBalanceOffset: Flow<Double> = dao.getPreferenceFlow("starting_balance_offset").map {
-        it?.toDoubleOrNull() ?: 0.0
-    }
+    // Backward-compatible alias for existing tests and consumers
+    val startingBalanceOffset: Flow<Double> = dao.getTotalOffsetFlow()
 
     suspend fun insertTransaction(transaction: TransactionEntity): Long {
         return dao.insertTransaction(transaction)
@@ -49,8 +52,191 @@ class FinanceRepository(
         dao.setIncomeEngineConfig(config)
     }
 
+    fun advancePayday(paydayTimestamp: Long, cadence: String): Long {
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = paydayTimestamp
+        }
+        when (cadence.lowercase()) {
+            "weekly" -> cal.add(Calendar.DAY_OF_YEAR, 7)
+            "monthly" -> cal.add(Calendar.MONTH, 1)
+            else -> cal.add(Calendar.DAY_OF_YEAR, 14) // Bi-Weekly
+        }
+        return cal.timeInMillis
+    }
+
+    suspend fun checkAndTriggerRecurringIncome(currentTime: Long = System.currentTimeMillis()): List<TransactionEntity> {
+        return withContext(ioDispatcher) {
+            val config = dao.getIncomeEngineConfigDirect() ?: return@withContext emptyList()
+            if (!config.isActive || config.expectedIncome <= 0.0) {
+                return@withContext emptyList()
+            }
+
+            val triggeredTransactions = mutableListOf<TransactionEntity>()
+            var currentPayday = config.nextPaydayTimestamp
+
+            val calToday = Calendar.getInstance().apply {
+                timeInMillis = currentTime
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+
+            var iterations = 0
+            val maxIterations = 24 // Safety limit to avoid infinite loops
+
+            while (iterations < maxIterations) {
+                val calPayday = Calendar.getInstance().apply {
+                    timeInMillis = currentPayday
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                // If scheduled payday date is today or in the past, it has arrived!
+                if (calToday.timeInMillis >= calPayday.timeInMillis) {
+                    val paycheckTitle = when (config.cadence.lowercase()) {
+                        "weekly" -> "Weekly Paycheck"
+                        "monthly" -> "Monthly Paycheck"
+                        else -> "Bi-Weekly Paycheck"
+                    }
+
+                    // Check if an auto-income transaction was already deposited on this calendar day
+                    val dayStart = calPayday.timeInMillis
+                    val dayEnd = dayStart + (24L * 60 * 60 * 1000) - 1
+                    val existingCount = dao.getAutoTransactionCountInRange(dayStart, dayEnd)
+
+                    val isToday = calPayday.get(Calendar.YEAR) == calToday.get(Calendar.YEAR) &&
+                            calPayday.get(Calendar.DAY_OF_YEAR) == calToday.get(Calendar.DAY_OF_YEAR)
+
+                    val txTimestamp = if (isToday) {
+                        currentTime
+                    } else {
+                        dayStart + (12 * 60 * 60 * 1000)
+                    }
+
+                    if (existingCount == 0) {
+                        val newTx = TransactionEntity(
+                            title = paycheckTitle,
+                            category = "Recurring Income",
+                            amount = config.expectedIncome,
+                            isExpense = false,
+                            timestamp = txTimestamp,
+                            note = "Paycheck",
+                            isAuto = true,
+                            statusText = "Deposited"
+                        )
+                        val id = dao.insertTransaction(newTx)
+                        triggeredTransactions.add(newTx.copy(id = id))
+                    }
+
+                    currentPayday = advancePayday(currentPayday, config.cadence)
+                    iterations++
+                } else {
+                    break
+                }
+            }
+
+            if (currentPayday != config.nextPaydayTimestamp) {
+                dao.setIncomeEngineConfig(
+                    config.copy(nextPaydayTimestamp = currentPayday)
+                )
+            }
+
+            triggeredTransactions
+        }
+    }
+
+    suspend fun triggerIncomeNow(): TransactionEntity? = withContext(ioDispatcher) {
+        val config = dao.getIncomeEngineConfigDirect() ?: return@withContext null
+        if (config.expectedIncome <= 0.0) return@withContext null
+
+        val paycheckTitle = when (config.cadence.lowercase()) {
+            "weekly" -> "Weekly Paycheck"
+            "monthly" -> "Monthly Paycheck"
+            else -> "Bi-Weekly Paycheck"
+        }
+
+        val now = System.currentTimeMillis()
+        val newTx = TransactionEntity(
+            title = paycheckTitle,
+            category = "Recurring Income",
+            amount = config.expectedIncome,
+            isExpense = false,
+            timestamp = now,
+            note = "Paycheck",
+            isAuto = true,
+            statusText = "Deposited"
+        )
+        val id = dao.insertTransaction(newTx)
+        val nextPayday = advancePayday(config.nextPaydayTimestamp, config.cadence)
+        dao.setIncomeEngineConfig(config.copy(nextPaydayTimestamp = nextPayday, isActive = true))
+        newTx.copy(id = id)
+    }
+
+    suspend fun addOffsetTransaction(amount: Double, note: String = "Balance adjustment"): Long {
+        return withContext(ioDispatcher) {
+            dao.insertOffsetTransaction(
+                OffsetTransactionEntity(
+                    amount = amount,
+                    note = note.ifBlank { "Balance adjustment" },
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    suspend fun deleteOffsetTransaction(id: Long) {
+        withContext(ioDispatcher) {
+            dao.deleteOffsetTransactionById(id)
+        }
+    }
+
+    suspend fun clearAllOffsetTransactions() {
+        withContext(ioDispatcher) {
+            dao.clearAllOffsetTransactions()
+        }
+    }
+
     suspend fun setStartingBalanceOffset(offset: Double) {
-        dao.setPreference(AppPreferenceEntity("starting_balance_offset", offset.toString()))
+        withContext(ioDispatcher) {
+            dao.clearAllOffsetTransactions()
+            if (abs(offset) > 0.0001) {
+                dao.insertOffsetTransaction(
+                    OffsetTransactionEntity(
+                        amount = offset,
+                        note = "Offset Adjustment",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            }
+            dao.setPreference(AppPreferenceEntity("starting_balance_offset", offset.toString()))
+            dao.setPreference(AppPreferenceEntity("migrated_starting_balance_to_offset", "true"))
+        }
+    }
+
+    suspend fun migrateStartingBalanceToOffsetIfNeeded() {
+        withContext(ioDispatcher) {
+            val migrated = dao.getPreference("migrated_starting_balance_to_offset")
+            if (migrated != "true") {
+                val oldStartingBalanceStr = dao.getPreference("starting_balance_offset")
+                val oldStartingBalance = oldStartingBalanceStr?.toDoubleOrNull() ?: 0.0
+                if (abs(oldStartingBalance) > 0.0001) {
+                    val existing = dao.getAllOffsetTransactionsList()
+                    if (existing.isEmpty()) {
+                        dao.insertOffsetTransaction(
+                            OffsetTransactionEntity(
+                                amount = oldStartingBalance,
+                                note = "Converted Starting Balance",
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                }
+                dao.setPreference(AppPreferenceEntity("migrated_starting_balance_to_offset", "true"))
+            }
+        }
     }
 
     suspend fun insertCategory(category: CategoryEntity): Long {
@@ -99,7 +285,10 @@ class FinanceRepository(
             if (seeded != "true") {
                 seedRealisticInitialData()
                 dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
+            } else {
+                dao.updateDirectDepNotesToPaycheck()
             }
+            migrateStartingBalanceToOffsetIfNeeded()
             seedDefaultCategoriesIfEmpty()
         }
     }
@@ -107,7 +296,9 @@ class FinanceRepository(
     suspend fun resetAllData() {
         withContext(ioDispatcher) {
             dao.clearAllTransactions()
+            dao.clearAllOffsetTransactions()
             dao.setPreference(AppPreferenceEntity("starting_balance_offset", "0.0"))
+            dao.setPreference(AppPreferenceEntity("migrated_starting_balance_to_offset", "true"))
             dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
             dao.setIncomeEngineConfig(
                 IncomeEngineEntity(
@@ -124,7 +315,9 @@ class FinanceRepository(
     suspend fun restoreDemoData() {
         withContext(ioDispatcher) {
             dao.clearAllTransactions()
+            dao.clearAllOffsetTransactions()
             dao.setPreference(AppPreferenceEntity("starting_balance_offset", "0.0"))
+            dao.setPreference(AppPreferenceEntity("migrated_starting_balance_to_offset", "true"))
             seedRealisticInitialData()
             seedDefaultCategoriesIfEmpty()
             dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
@@ -207,7 +400,7 @@ class FinanceRepository(
                 amount = 2100.00,
                 isExpense = false,
                 timestamp = now - (3 * dayMillis) - (8 * 3600 * 1000),
-                note = "Direct Dep",
+                note = "Paycheck",
                 isAuto = true,
                 statusText = "Deposited"
             ),
@@ -362,7 +555,7 @@ class FinanceRepository(
                 amount = 2100.00,
                 isExpense = false,
                 timestamp = now - (17 * dayMillis),
-                note = "Direct Dep",
+                note = "Paycheck",
                 isAuto = true,
                 statusText = "Deposited"
             )

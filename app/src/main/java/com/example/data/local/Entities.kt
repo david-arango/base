@@ -33,3 +33,12 @@ data class AppPreferenceEntity(
     val key: String,
     val value: String
 )
+
+@Entity(tableName = "offset_transactions")
+data class OffsetTransactionEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val amount: Double,
+    val note: String = "Balance adjustment",
+    val timestamp: Long = System.currentTimeMillis()
+)

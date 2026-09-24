@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.local.CategoryEntity
 import com.example.data.local.IncomeEngineEntity
+import com.example.data.local.OffsetTransactionEntity
 import com.example.data.local.TransactionEntity
 import com.example.data.model.CategoryItem
 import com.example.data.model.DefaultCategories
@@ -21,6 +22,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.abs
 
 enum class AppScreen {
     LEDGER,
@@ -45,6 +47,7 @@ data class FinanceUiState(
     val transactions: List<TransactionEntity> = emptyList(),
     val incomeEngine: IncomeEngineEntity = IncomeEngineEntity(),
     val startingBalanceOffset: Double = 0.0,
+    val offsetTransactions: List<OffsetTransactionEntity> = emptyList(),
     val rollingBalance: Double = 0.0,
     val periodIn: Double = 0.0,
     val periodOut: Double = 0.0,
@@ -71,6 +74,7 @@ class FinanceViewModel @JvmOverloads constructor(
     init {
         viewModelScope.launch {
             repository.checkAndSeedInitialData()
+            checkRecurringIncomeTriggers()
         }
     }
 
@@ -92,19 +96,29 @@ class FinanceViewModel @JvmOverloads constructor(
     private val _isCategoryManagerOpen = MutableStateFlow(false)
     val isCategoryManagerOpen: StateFlow<Boolean> = _isCategoryManagerOpen.asStateFlow()
 
-    private val _isStartingBalanceDialogOpen = MutableStateFlow(false)
-    val isStartingBalanceDialogOpen: StateFlow<Boolean> = _isStartingBalanceDialogOpen.asStateFlow()
+    private val _isOffsetBudgetDialogOpen = MutableStateFlow(false)
+    val isOffsetBudgetDialogOpen: StateFlow<Boolean> = _isOffsetBudgetDialogOpen.asStateFlow()
+    val isStartingBalanceDialogOpen: StateFlow<Boolean> get() = _isOffsetBudgetDialogOpen.asStateFlow()
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
+    @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<FinanceUiState> = combine(
         repository.allTransactions,
         repository.incomeEngineConfig,
-        repository.startingBalanceOffset,
+        repository.totalOffset,
         _analyticsPeriod,
-        repository.allCategories
-    ) { transactions, incomeConfigRaw, offset, period, categoriesRaw ->
+        repository.allCategories,
+        repository.allOffsetTransactions
+    ) { args: Array<Any?> ->
+        val transactions = args[0] as List<TransactionEntity>
+        val incomeConfigRaw = args[1] as IncomeEngineEntity?
+        val offset = args[2] as Double
+        val period = args[3] as AnalyticsPeriod
+        val categoriesRaw = args[4] as List<CategoryEntity>
+        val offsetTxs = args[5] as List<OffsetTransactionEntity>
+
         val incomeConfig = incomeConfigRaw ?: IncomeEngineEntity()
 
         val categoryItems = if (categoriesRaw.isEmpty()) {
@@ -219,6 +233,7 @@ class FinanceViewModel @JvmOverloads constructor(
             transactions = transactions,
             incomeEngine = incomeConfig,
             startingBalanceOffset = offset,
+            offsetTransactions = offsetTxs,
             rollingBalance = rollingBalance,
             periodIn = periodIn,
             periodOut = periodOut,
@@ -277,13 +292,17 @@ class FinanceViewModel @JvmOverloads constructor(
         _isCategoryManagerOpen.value = false
     }
 
-    fun openStartingBalanceDialog() {
-        _isStartingBalanceDialogOpen.value = true
+    fun openOffsetBudgetDialog() {
+        _isOffsetBudgetDialogOpen.value = true
     }
 
-    fun closeStartingBalanceDialog() {
-        _isStartingBalanceDialogOpen.value = false
+    fun closeOffsetBudgetDialog() {
+        _isOffsetBudgetDialogOpen.value = false
     }
+
+    fun openStartingBalanceDialog() = openOffsetBudgetDialog()
+
+    fun closeStartingBalanceDialog() = closeOffsetBudgetDialog()
 
     fun showToast(message: String) {
         _toastMessage.value = message
@@ -368,16 +387,63 @@ class FinanceViewModel @JvmOverloads constructor(
                     isActive = true
                 )
             )
+            val triggered = repository.checkAndTriggerRecurringIncome()
             closeIncomeEngine()
-            showToast("Income Engine updated")
+            if (triggered.isNotEmpty()) {
+                val totalAmount = triggered.sumOf { it.amount }
+                showToast("Income Engine updated • +$${String.format(Locale.US, "%,.2f", totalAmount)} deposited to ledger")
+            } else {
+                showToast("Income Engine updated")
+            }
+        }
+    }
+
+    fun checkRecurringIncomeTriggers() {
+        viewModelScope.launch {
+            val triggered = repository.checkAndTriggerRecurringIncome()
+            if (triggered.isNotEmpty()) {
+                val totalAmount = triggered.sumOf { it.amount }
+                showToast("Payday! +$${String.format(Locale.US, "%,.2f", totalAmount)} automatically deposited to ledger")
+            }
+        }
+    }
+
+    fun triggerIncomeNow() {
+        viewModelScope.launch {
+            val triggered = repository.triggerIncomeNow()
+            if (triggered != null) {
+                closeIncomeEngine()
+                showToast("Payday! +$${String.format(Locale.US, "%,.2f", triggered.amount)} deposited to ledger")
+            } else {
+                showToast("No active recurring income configured")
+            }
+        }
+    }
+
+    fun addOffsetTransaction(amount: Double, note: String = "Balance adjustment") {
+        viewModelScope.launch {
+            repository.addOffsetTransaction(amount, note)
+            val formatted = String.format(Locale.US, "%.2f", abs(amount))
+            if (amount >= 0) {
+                showToast("Offset +$$formatted applied to balance")
+            } else {
+                showToast("Offset -$$formatted adjusted from balance")
+            }
+        }
+    }
+
+    fun deleteOffsetTransaction(id: Long) {
+        viewModelScope.launch {
+            repository.deleteOffsetTransaction(id)
+            showToast("Offset adjustment removed")
         }
     }
 
     fun updateStartingBalanceOffset(offset: Double) {
         viewModelScope.launch {
             repository.setStartingBalanceOffset(offset)
-            closeStartingBalanceDialog()
-            showToast("Offset adjusted to $${String.format(Locale.US, "%.2f", offset)}")
+            closeOffsetBudgetDialog()
+            showToast("Offset budget updated to $${String.format(Locale.US, "%.2f", offset)}")
         }
     }
 

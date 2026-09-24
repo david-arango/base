@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.local.AppDatabase
+import com.example.data.local.IncomeEngineEntity
 import com.example.data.local.TransactionEntity
 import com.example.data.repository.FinanceRepository
 import com.example.ui.AnalyticsPeriod
@@ -272,6 +273,48 @@ class FinanceViewModelTest {
     }
 
     @Test
+    fun addMultipleOffsetTransactions_logsAllOffsetsAndUpdatesBalance() = runTest(testDispatcher) {
+        waitForCondition { viewModel.uiState.value.transactions.isNotEmpty() }
+        repository.clearAllOffsetTransactions()
+        waitForCondition { viewModel.uiState.value.offsetTransactions.isEmpty() }
+
+        val initialTransactionsCount = viewModel.uiState.value.transactions.size
+
+        // Add first offset
+        viewModel.addOffsetTransaction(100.0, "Bonus check")
+        waitForCondition { viewModel.uiState.value.offsetTransactions.size == 1 }
+
+        assertEquals(1, viewModel.uiState.value.offsetTransactions.size)
+        assertEquals(100.0, viewModel.uiState.value.startingBalanceOffset, 0.001)
+
+        // Add second offset (negative adjustment)
+        viewModel.addOffsetTransaction(-35.0, "Cash withdrawal")
+        waitForCondition { viewModel.uiState.value.offsetTransactions.size == 2 }
+
+        assertEquals(2, viewModel.uiState.value.offsetTransactions.size)
+        assertEquals(65.0, viewModel.uiState.value.startingBalanceOffset, 0.001)
+
+        // Add third offset
+        viewModel.addOffsetTransaction(50.0, "Refund")
+        waitForCondition { viewModel.uiState.value.offsetTransactions.size == 3 }
+
+        assertEquals(3, viewModel.uiState.value.offsetTransactions.size)
+        assertEquals(115.0, viewModel.uiState.value.startingBalanceOffset, 0.001)
+
+        // Offsets should NOT be in the transactions ledger
+        assertEquals(initialTransactionsCount, viewModel.uiState.value.transactions.size)
+        assertFalse(viewModel.uiState.value.transactions.any { it.note == "Bonus check" || it.note == "Cash withdrawal" })
+
+        // Delete one offset transaction
+        val offsetToDelete = viewModel.uiState.value.offsetTransactions.first { it.amount == -35.0 }
+        viewModel.deleteOffsetTransaction(offsetToDelete.id)
+        waitForCondition { viewModel.uiState.value.offsetTransactions.size == 2 }
+
+        assertEquals(2, viewModel.uiState.value.offsetTransactions.size)
+        assertEquals(150.0, viewModel.uiState.value.startingBalanceOffset, 0.001)
+    }
+
+    @Test
     fun resetAllData_clearsStateAndShowsToast() = runTest(testDispatcher) {
         repository.insertTransaction(
             TransactionEntity(
@@ -432,5 +475,56 @@ class FinanceViewModelTest {
         waitForCondition { viewModel.uiState.value.categories.none { it.name == "Courses & Books" } }
         assertTrue(viewModel.uiState.value.categories.none { it.name == "Courses & Books" })
         assertEquals("Category \"Courses & Books\" deleted", viewModel.toastMessage.value)
+    }
+
+    @Test
+    fun updateIncomeEngine_whenPaydayIsTodayOrPast_automaticallyTriggersAndUpdatesLedger() = runTest(testDispatcher) {
+        val now = System.currentTimeMillis()
+        val initialTxCount = repository.allTransactions.first().size
+
+        // Setting next payday to today should immediately trigger deposit
+        viewModel.updateIncomeEngine(
+            expectedIncome = 2250.0,
+            cadence = "Bi-Weekly",
+            nextPaydayDate = now
+        )
+
+        waitForCondition { repository.allTransactions.first().size > initialTxCount }
+        val allTxs = repository.allTransactions.first()
+        val autoIncomeTx = allTxs.find { it.isAuto && it.amount == 2250.0 }
+        assertNotNull(autoIncomeTx)
+        assertEquals("Bi-Weekly Paycheck", autoIncomeTx!!.title)
+        assertEquals("Paycheck", autoIncomeTx.note)
+        assertEquals(false, autoIncomeTx.isExpense)
+
+        // Ledger UI state should contain this transaction
+        waitForCondition { viewModel.uiState.value.transactions.any { it.id == autoIncomeTx.id } }
+        assertTrue(viewModel.uiState.value.transactions.any { it.id == autoIncomeTx.id })
+    }
+
+    @Test
+    fun triggerIncomeNow_creditsLedgerImmediately() = runTest(testDispatcher) {
+        // First ensure income engine has an expected amount
+        repository.updateIncomeEngine(
+            IncomeEngineEntity(
+                id = 1,
+                expectedIncome = 1900.0,
+                cadence = "Weekly",
+                nextPaydayTimestamp = System.currentTimeMillis() + 86400000L * 3,
+                isActive = true
+            )
+        )
+
+        val initialTxCount = repository.allTransactions.first().size
+        viewModel.triggerIncomeNow()
+
+        waitForCondition { repository.allTransactions.first().size > initialTxCount }
+        val allTxs = repository.allTransactions.first()
+        val triggered = allTxs.find { it.isAuto && it.amount == 1900.0 }
+        assertNotNull(triggered)
+        assertEquals("Weekly Paycheck", triggered!!.title)
+
+        waitForCondition { viewModel.toastMessage.value != null }
+        assertTrue(viewModel.toastMessage.value!!.contains("1,900.00"))
     }
 }

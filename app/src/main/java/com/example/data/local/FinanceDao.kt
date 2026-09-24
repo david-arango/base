@@ -34,6 +34,12 @@ interface FinanceDao {
     @Query("SELECT * FROM income_engine WHERE id = 1")
     fun getIncomeEngineConfig(): Flow<IncomeEngineEntity?>
 
+    @Query("SELECT * FROM income_engine WHERE id = 1")
+    suspend fun getIncomeEngineConfigDirect(): IncomeEngineEntity?
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE isAuto = 1 AND timestamp BETWEEN :startTime AND :endTime")
+    suspend fun getAutoTransactionCountInRange(startTime: Long, endTime: Long): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setIncomeEngineConfig(config: IncomeEngineEntity)
 
@@ -74,4 +80,29 @@ interface FinanceDao {
 
     @Query("UPDATE transactions SET category = 'Other' WHERE category = :categoryName")
     suspend fun reassignCategoryInTransactions(categoryName: String)
+
+    @Query("UPDATE transactions SET note = 'Paycheck' WHERE isAuto = 1 AND (note = 'Direct Dep' OR note = 'Direct deposit')")
+    suspend fun updateDirectDepNotesToPaycheck()
+
+    // Offset Transactions (Invisible balance adjustments)
+    @Query("SELECT * FROM offset_transactions ORDER BY timestamp DESC")
+    fun getAllOffsetTransactions(): Flow<List<OffsetTransactionEntity>>
+
+    @Query("SELECT * FROM offset_transactions ORDER BY timestamp DESC")
+    suspend fun getAllOffsetTransactionsList(): List<OffsetTransactionEntity>
+
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM offset_transactions")
+    fun getTotalOffsetFlow(): Flow<Double>
+
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM offset_transactions")
+    suspend fun getTotalOffsetDirect(): Double
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOffsetTransaction(offsetTx: OffsetTransactionEntity): Long
+
+    @Query("DELETE FROM offset_transactions WHERE id = :id")
+    suspend fun deleteOffsetTransactionById(id: Long)
+
+    @Query("DELETE FROM offset_transactions")
+    suspend fun clearAllOffsetTransactions()
 }
