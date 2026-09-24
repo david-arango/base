@@ -619,5 +619,14 @@ class FinanceAppComposeTest {
         // Verify Restore Demo Data option is hidden from Settings
         composeTestRule.onAllNodesWithTag("settings_restore_demo_row").assertCountEquals(0)
         composeTestRule.onAllNodesWithText("Restore Demo Data").assertCountEquals(0)
+
+        // Verify Balance Offset row is displayed and "Offset Budget" is replaced
+        composeTestRule.onNodeWithText("Balance Offset").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Offset Budget").assertCountEquals(0)
+
+        // Open Balance Offset sheet and verify title
+        composeTestRule.onNodeWithTag("settings_starting_balance_row").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("starting_balance_display").assertIsDisplayed()
     }
 }

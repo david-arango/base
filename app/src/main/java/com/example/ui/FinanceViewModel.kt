@@ -443,7 +443,7 @@ class FinanceViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             repository.setStartingBalanceOffset(offset)
             closeOffsetBudgetDialog()
-            showToast("Offset budget updated to $${String.format(Locale.US, "%.2f", offset)}")
+            showToast("Balance offset updated to $${String.format(Locale.US, "%.2f", offset)}")
         }
     }
 

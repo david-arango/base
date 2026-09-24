@@ -301,7 +301,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
-                        // Offset Budget Row
+                        // Balance Offset Row
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -331,7 +331,7 @@ fun SettingsScreen(
                                 }
                                 Column {
                                     Text(
-                                        text = "Offset Budget",
+                                        text = "Balance Offset",
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )

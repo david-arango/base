@@ -602,7 +602,7 @@ fun OffsetBudgetSheet(
                         )
                     }
                     Text(
-                        text = "Offset Budget",
+                        text = "Balance Offset",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
