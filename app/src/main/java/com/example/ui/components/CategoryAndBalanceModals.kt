@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -302,8 +303,8 @@ fun CategoryManagerSheet(
             confirmButtonText = "Create Category",
             confirmButtonTag = "save_category_button",
             onDismiss = { isCreating = false },
-            onConfirm = { name, iconKey ->
-                onCreateCategory(name, iconKey, 0xFF5B604BL)
+            onConfirm = { name, iconKey, colorHex ->
+                onCreateCategory(name, iconKey, colorHex)
                 isCreating = false
             }
         )
@@ -316,11 +317,12 @@ fun CategoryManagerSheet(
             title = "Edit Category",
             initialName = cat.name,
             initialIconKey = cat.iconKey,
+            initialColor = cat.color,
             confirmButtonText = "Save Changes",
             confirmButtonTag = "update_category_button",
             onDismiss = { editingCategory = null },
-            onConfirm = { name, iconKey ->
-                onUpdateCategory(cat.dbId, name, iconKey, 0xFF5B604BL, cat.name)
+            onConfirm = { name, iconKey, colorHex ->
+                onUpdateCategory(cat.dbId, name, iconKey, colorHex, cat.name)
                 editingCategory = null
             }
         )
@@ -380,14 +382,19 @@ fun CategoryEditorDialog(
     title: String,
     initialName: String = "",
     initialIconKey: String = "category",
+    initialColor: Color? = null,
     confirmButtonText: String,
     confirmButtonTag: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, iconKey: String) -> Unit
+    onConfirm: (name: String, iconKey: String, colorHex: Long) -> Unit
 ) {
     var name by remember { mutableStateOf(initialName) }
     var selectedIconKey by remember { mutableStateOf(initialIconKey) }
     var hasManuallyPickedIcon by remember { mutableStateOf(false) }
+    var selectedColor by remember {
+        mutableStateOf(initialColor ?: CategoryVisuals.findMatchingColor(initialName, initialIconKey))
+    }
+    var hasManuallyPickedColor by remember { mutableStateOf(initialColor != null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -415,6 +422,9 @@ fun CategoryEditorDialog(
                                 selectedIconKey = matchedKey
                             }
                         }
+                        if (!hasManuallyPickedColor) {
+                            selectedColor = CategoryVisuals.findMatchingColor(newName, selectedIconKey)
+                        }
                     },
                     label = { Text("Category Name") },
                     placeholder = { Text("e.g. Subscriptions") },
@@ -434,6 +444,67 @@ fun CategoryEditorDialog(
                         .testTag("category_name_input")
                 )
 
+                // Color Selection Row
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Category Color",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(selectedColor)
+                                .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                        )
+                    }
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        maxItemsInEachRow = 5
+                    ) {
+                        CategoryVisuals.colorOptions.forEachIndexed { index, color ->
+                            val isColorSelected = selectedColor == color
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .clickable {
+                                        selectedColor = color
+                                        hasManuallyPickedColor = true
+                                    }
+                                    .then(
+                                        if (isColorSelected) {
+                                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                                    .testTag("color_choice_$index"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isColorSelected) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = "Selected color",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Icon Selection with Selected Indicator
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
@@ -450,13 +521,13 @@ fun CategoryEditorDialog(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                .background(selectedColor.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = CategoryVisuals.getIcon(selectedIconKey),
                                 contentDescription = "Selected icon",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = selectedColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -465,7 +536,7 @@ fun CategoryEditorDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 240.dp)
+                            .heightIn(max = 200.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
                         FlowRow(
@@ -507,7 +578,14 @@ fun CategoryEditorDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name.trim(), selectedIconKey) },
+                onClick = {
+                    val colorHex = try {
+                        selectedColor.toArgb().toLong() and 0xFFFFFFFFL
+                    } catch (_: Exception) {
+                        selectedColor.value.toLong()
+                    }
+                    onConfirm(name.trim(), selectedIconKey, colorHex)
+                },
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -528,6 +606,28 @@ fun CategoryEditorDialog(
         },
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+fun CategoryEditorDialog(
+    title: String,
+    initialName: String = "",
+    initialIconKey: String = "category",
+    confirmButtonText: String,
+    confirmButtonTag: String,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, iconKey: String) -> Unit
+) {
+    CategoryEditorDialog(
+        title = title,
+        initialName = initialName,
+        initialIconKey = initialIconKey,
+        initialColor = null,
+        confirmButtonText = confirmButtonText,
+        confirmButtonTag = confirmButtonTag,
+        onDismiss = onDismiss,
+        onConfirm = { name, iconKey, _ -> onConfirm(name, iconKey) }
     )
 }
 

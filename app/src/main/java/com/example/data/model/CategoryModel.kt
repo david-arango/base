@@ -168,17 +168,46 @@ object CategoryVisuals {
     }
 
     val colorOptions: List<Color> = listOf(
-        CalmSecondary,
-        CalmTerracotta,
-        CalmPositiveDeep,
-        CalmNegativeDeep,
-        CalmSurfaceTint,
-        CalmSage,
-        Color(0xFF6B4E3F),
-        Color(0xFF1B555B),
-        Color(0xFF384656),
-        Color(0xFF7A4F1D)
+        Color(0xFF2E7D32), // Emerald Green (Groceries / Food)
+        Color(0xFFD35400), // Terracotta Orange (Dining / Cafe / Food)
+        Color(0xFF2980B9), // Slate Blue (Bills / Utilities / Housing)
+        Color(0xFFD48806), // Amber Gold (Transport / Auto / Travel)
+        Color(0xFF8E44AD), // Amethyst Purple (Shopping / Retail / Goods)
+        Color(0xFF16A085), // Turquoise Teal (Health / Spa / Wellness)
+        Color(0xFFC0392B), // Berry Crimson (Entertainment / Hobbies / Media)
+        Color(0xFF00838F), // Deep Cyan (Travel / Electronics / Tech)
+        Color(0xFF6D4C41), // Warm Bronze / Brown (Home / Furniture)
+        Color(0xFF546E7A)  // Steel Blue-Grey (Bills / Other)
     )
+
+    fun findMatchingColor(name: String, iconKey: String = ""): Color {
+        val lower = name.lowercase(java.util.Locale.US).trim()
+        val key = if (iconKey.isNotBlank()) iconKey else (findMatchingIconKey(name) ?: "")
+        return when {
+            lower.contains("grocer") || key == "local_grocery_store" -> colorOptions[0]
+            lower.contains("dining") || lower.contains("restaurant") || lower.contains("cafe") || lower.contains("coffee") || key == "restaurant" || key == "take_out" -> colorOptions[1]
+            lower.contains("bill") || lower.contains("util") || lower.contains("phone") || lower.contains("power") || key == "receipt" || key == "bolt" -> colorOptions[2]
+            lower.contains("transport") || lower.contains("transit") || lower.contains("subway") || lower.contains("car") || lower.contains("gas") || key == "car" || key == "directions_subway" -> colorOptions[3]
+            lower.contains("shop") || lower.contains("cloth") || lower.contains("book") || key == "shopping_bag" -> colorOptions[4]
+            lower.contains("health") || lower.contains("medical") || lower.contains("doctor") || lower.contains("gym") || lower.contains("spa") || key == "spa" || key == "doctor" -> colorOptions[5]
+            lower.contains("entertain") || lower.contains("movie") || lower.contains("music") || lower.contains("game") || key == "movies" || key == "subscriptions" -> colorOptions[6]
+            lower.contains("travel") || lower.contains("vacation") || lower.contains("flight") || key == "travel" -> colorOptions[7]
+            lower.contains("home") || lower.contains("furniture") || lower.contains("pet") || key == "home" -> colorOptions[8]
+            else -> {
+                val index = (lower.hashCode() and 0x7FFFFFFF) % colorOptions.size
+                colorOptions[index]
+            }
+        }
+    }
+
+    fun findMatchingColorHex(name: String, iconKey: String = ""): Long {
+        val c = findMatchingColor(name, iconKey)
+        return try {
+            c.toArgb().toLong() and 0xFFFFFFFFL
+        } catch (_: Exception) {
+            c.value.toLong()
+        }
+    }
 
     fun getIcon(key: String): ImageVector {
         val resolved = keyAliases[key] ?: key
@@ -255,23 +284,30 @@ object CategoryVisuals {
 
 object DefaultCategories {
     val list = listOf(
-        CategoryItem("groceries", "Groceries", Icons.Filled.LocalGroceryStore, CalmSecondary, 1L, "local_grocery_store"),
-        CategoryItem("dining", "Dining Out", Icons.Filled.Restaurant, CalmNegativeDeep, 2L, "restaurant"),
-        CategoryItem("bills", "Bills & Utilities", Icons.Filled.Receipt, CalmSurfaceTint, 3L, "receipt"),
-        CategoryItem("transport", "Transport", Icons.Filled.DirectionsSubway, CalmTerracotta, 4L, "directions_subway"),
-        CategoryItem("shopping", "Shopping", Icons.Filled.ShoppingBag, CalmOutline, 5L, "shopping_bag"),
-        CategoryItem("health", "Health", Icons.Filled.Spa, CalmPositiveDeep, 6L, "spa"),
-        CategoryItem("entertainment", "Entertainment", Icons.Filled.ConfirmationNumber, Color(0xFF6B4E3F), 7L, "movie")
+        CategoryItem("groceries", "Groceries", Icons.Filled.LocalGroceryStore, Color(0xFF2E7D32), 1L, "local_grocery_store"),
+        CategoryItem("dining", "Dining Out", Icons.Filled.Restaurant, Color(0xFFD35400), 2L, "restaurant"),
+        CategoryItem("bills", "Bills & Utilities", Icons.Filled.Receipt, Color(0xFF2980B9), 3L, "receipt"),
+        CategoryItem("transport", "Transport", Icons.Filled.DirectionsSubway, Color(0xFFD48806), 4L, "directions_subway"),
+        CategoryItem("shopping", "Shopping", Icons.Filled.ShoppingBag, Color(0xFF8E44AD), 5L, "shopping_bag"),
+        CategoryItem("health", "Health", Icons.Filled.Spa, Color(0xFF16A085), 6L, "spa"),
+        CategoryItem("entertainment", "Entertainment", Icons.Filled.ConfirmationNumber, Color(0xFFC0392B), 7L, "movie")
     )
 
     fun fromEntity(entity: CategoryEntity): CategoryItem {
         val defaultMatch = list.firstOrNull { it.name.equals(entity.name, ignoreCase = true) }
         val id = defaultMatch?.id ?: entity.name.lowercase(java.util.Locale.US).replace("&", "").trim().replace(Regex("\\s+"), "_")
+        val resolvedColor = if (defaultMatch != null && (entity.colorHex == 0xFF5B604BL || entity.colorHex == 0L)) {
+            defaultMatch.color
+        } else if (entity.colorHex == 0xFF5B604BL || entity.colorHex == 0L) {
+            CategoryVisuals.findMatchingColor(entity.name, entity.iconKey)
+        } else {
+            Color(entity.colorHex)
+        }
         return CategoryItem(
             id = id,
             name = entity.name,
             icon = CategoryVisuals.getIcon(entity.iconKey),
-            color = Color(entity.colorHex),
+            color = resolvedColor,
             dbId = entity.id,
             iconKey = entity.iconKey
         )
@@ -296,17 +332,23 @@ object DefaultCategories {
             val customMatch = customCategories.firstOrNull { it.name.equals(name, ignoreCase = true) }
             if (customMatch != null) return customMatch
         }
-        return list.firstOrNull { it.name.equals(name, ignoreCase = true) }
-            ?: when {
-                name.contains("Groceries", ignoreCase = true) -> list[0]
-                name.contains("Dining", ignoreCase = true) || name.contains("Coffee", ignoreCase = true) -> list[1]
-                name.contains("Bill", ignoreCase = true) || name.contains("Utility", ignoreCase = true) -> list[2]
-                name.contains("Transport", ignoreCase = true) -> list[3]
-                name.contains("Shopping", ignoreCase = true) -> list[4]
-                name.contains("Health", ignoreCase = true) -> list[5]
-                name.contains("Income", ignoreCase = true) || name.contains("Paycheck", ignoreCase = true) ->
-                    CategoryItem("income", "Recurring Income", Icons.Filled.Work, CalmPositiveDeep)
-                else -> CategoryItem("other", name, Icons.Filled.Payments, CalmSecondary)
+        val defaultMatch = list.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        if (defaultMatch != null) return defaultMatch
+
+        return when {
+            name.contains("Groceries", ignoreCase = true) -> list[0]
+            name.contains("Dining", ignoreCase = true) || name.contains("Coffee", ignoreCase = true) -> list[1]
+            name.contains("Bill", ignoreCase = true) || name.contains("Utility", ignoreCase = true) -> list[2]
+            name.contains("Transport", ignoreCase = true) -> list[3]
+            name.contains("Shopping", ignoreCase = true) -> list[4]
+            name.contains("Health", ignoreCase = true) -> list[5]
+            name.contains("Entertainment", ignoreCase = true) -> list[6]
+            name.contains("Income", ignoreCase = true) || name.contains("Paycheck", ignoreCase = true) ->
+                CategoryItem("income", "Recurring Income", Icons.Filled.Work, Color(0xFF1E824C))
+            else -> {
+                val assignedColor = CategoryVisuals.findMatchingColor(name)
+                CategoryItem("other", name, Icons.Filled.Payments, assignedColor)
             }
+        }
     }
 }

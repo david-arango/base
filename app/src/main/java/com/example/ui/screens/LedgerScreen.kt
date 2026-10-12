@@ -396,7 +396,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = String.format(Locale.US, "+$%,.2f", uiState.periodIn),
+                                text = String.format(Locale.US, "+$%,.2f", uiState.currentPeriodIn),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = CalmPositiveDeep,
                                 maxLines = 1,
@@ -438,7 +438,7 @@ fun PerpetualRollingBalanceCard(uiState: FinanceUiState) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = String.format(Locale.US, "-$%,.2f", uiState.periodOut),
+                                text = String.format(Locale.US, "-$%,.2f", uiState.currentPeriodOut),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = CalmNegativeDeep,
                                 maxLines = 1,

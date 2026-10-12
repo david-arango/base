@@ -51,6 +51,8 @@ data class FinanceUiState(
     val rollingBalance: Double = 0.0,
     val periodIn: Double = 0.0,
     val periodOut: Double = 0.0,
+    val currentPeriodIn: Double = 0.0,
+    val currentPeriodOut: Double = 0.0,
     val daysLeftInPeriod: Int = 11,
     val periodDateRangeStr: String = "",
     val nextPaydayText: String = "",
@@ -131,26 +133,8 @@ class FinanceViewModel @JvmOverloads constructor(
         val totalExpenses = transactions.filter { it.isExpense }.sumOf { it.amount }
         val rollingBalance = offset + totalIncome - totalExpenses
 
-        // Period calculations
         val now = System.currentTimeMillis()
         val dayMillis = 24L * 60 * 60 * 1000
-        val cutoff = if (period == AnalyticsPeriod.CURRENT_PAYCHECK) {
-            now - (14L * dayMillis)
-        } else {
-            now - (30L * dayMillis)
-        }
-
-        val periodTransactions = transactions.filter { it.timestamp >= cutoff }
-        val periodIn = periodTransactions.filter { !it.isExpense }.sumOf { it.amount }
-        val periodOut = periodTransactions.filter { it.isExpense }.sumOf { it.amount }
-
-        val burnRatio = if (periodIn > 0) {
-            (periodOut / periodIn).toFloat().coerceIn(0f, 1f)
-        } else if (incomeConfig.expectedIncome > 0 && periodOut > 0) {
-            (periodOut / incomeConfig.expectedIncome).toFloat().coerceIn(0f, 1f)
-        } else {
-            0f
-        }
 
         val calToday = Calendar.getInstance().apply {
             timeInMillis = now
@@ -168,9 +152,9 @@ class FinanceViewModel @JvmOverloads constructor(
             set(Calendar.MILLISECOND, 0)
         }
 
-        // If configured payday has already passed, roll forward according to cadence
+        // If configured payday has arrived or passed, roll forward to the next period's start
         if (incomeConfig.expectedIncome > 0) {
-            while (calPayday.timeInMillis < calToday.timeInMillis) {
+            while (calPayday.timeInMillis <= calToday.timeInMillis) {
                 when (incomeConfig.cadence.lowercase()) {
                     "weekly" -> calPayday.add(Calendar.DAY_OF_YEAR, 7)
                     "monthly" -> calPayday.add(Calendar.MONTH, 1)
@@ -179,9 +163,72 @@ class FinanceViewModel @JvmOverloads constructor(
             }
         }
 
-        val diffDays = ((calPayday.timeInMillis - calToday.timeInMillis) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
-        val daysLeft = diffDays.coerceIn(1, 31)
-        val daysElapsed = (14 - daysLeft).coerceAtLeast(1)
+        val diffDays = ((calPayday.timeInMillis - calToday.timeInMillis) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(1)
+
+        // Current Paycheck Period calculation: starts exactly one cadence cycle prior to next payday,
+        // and ends the day before the next period starts (e.g. if new period starts Oct 7, previous ends Oct 6)
+        val currentPeriodStart: Long
+        val currentPeriodEnd: Long
+        val cycleDaysTotal: Int
+
+        if (incomeConfig.expectedIncome > 0) {
+            val calCycleStart = (calPayday.clone() as Calendar).apply {
+                when (incomeConfig.cadence.lowercase()) {
+                    "weekly" -> add(Calendar.DAY_OF_YEAR, -7)
+                    "monthly" -> add(Calendar.MONTH, -1)
+                    else -> add(Calendar.DAY_OF_YEAR, -14)
+                }
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val calCycleEnd = (calPayday.clone() as Calendar).apply {
+                add(Calendar.DAY_OF_YEAR, -1) // Ends day before next period starts
+                set(Calendar.HOUR_OF_DAY, 23)
+                set(Calendar.MINUTE, 59)
+                set(Calendar.SECOND, 59)
+                set(Calendar.MILLISECOND, 999)
+            }
+            currentPeriodStart = calCycleStart.timeInMillis
+            currentPeriodEnd = calCycleEnd.timeInMillis
+            cycleDaysTotal = when (incomeConfig.cadence.lowercase()) {
+                "weekly" -> 7
+                "monthly" -> (((calPayday.timeInMillis - calCycleStart.timeInMillis) / dayMillis)).toInt().coerceAtLeast(28)
+                else -> 14
+            }
+        } else {
+            currentPeriodStart = calToday.timeInMillis - (13L * dayMillis)
+            currentPeriodEnd = calToday.timeInMillis + dayMillis - 1
+            cycleDaysTotal = 14
+        }
+
+        val (periodStart, periodEnd) = if (period == AnalyticsPeriod.CURRENT_PAYCHECK) {
+            currentPeriodStart to currentPeriodEnd
+        } else {
+            (calToday.timeInMillis - (29L * dayMillis)) to (calToday.timeInMillis + dayMillis - 1)
+        }
+
+        // Transactions filtered for active analytics period
+        val periodTransactions = transactions.filter { it.timestamp in periodStart..periodEnd }
+        val periodIn = periodTransactions.filter { !it.isExpense }.sumOf { it.amount }
+        val periodOut = periodTransactions.filter { it.isExpense }.sumOf { it.amount }
+
+        // Current paycheck transactions (strictly for ledger & current paycheck summary)
+        val currentPaycheckTransactions = transactions.filter { it.timestamp in currentPeriodStart..currentPeriodEnd }
+        val currentPeriodIn = currentPaycheckTransactions.filter { !it.isExpense }.sumOf { it.amount }
+        val currentPeriodOut = currentPaycheckTransactions.filter { it.isExpense }.sumOf { it.amount }
+
+        val burnRatio = if (periodIn > 0) {
+            (periodOut / periodIn).toFloat().coerceIn(0f, 1f)
+        } else if (incomeConfig.expectedIncome > 0 && periodOut > 0) {
+            (periodOut / incomeConfig.expectedIncome).toFloat().coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+
+        val daysLeft = if (incomeConfig.expectedIncome > 0) diffDays.coerceIn(1, cycleDaysTotal) else 14
+        val daysElapsed = (cycleDaysTotal - daysLeft + 1).coerceAtLeast(1)
         val dailyPace = if (periodOut > 0) periodOut / daysElapsed else 0.0
 
         val paceNote = if (transactions.isEmpty() || periodOut == 0.0) {
@@ -214,8 +261,8 @@ class FinanceViewModel @JvmOverloads constructor(
 
         // Date calculations
         val sdf = SimpleDateFormat("MMM d", Locale.US)
-        val startDateStr = sdf.format(cutoff)
-        val endDateStr = sdf.format(now)
+        val startDateStr = sdf.format(periodStart)
+        val endDateStr = sdf.format(periodEnd)
         val dateRangeStr = "$startDateStr – $endDateStr"
 
         val nextIncomeDayName = SimpleDateFormat("EEEE", Locale.US).format(calPayday.time)
@@ -237,6 +284,8 @@ class FinanceViewModel @JvmOverloads constructor(
             rollingBalance = rollingBalance,
             periodIn = periodIn,
             periodOut = periodOut,
+            currentPeriodIn = currentPeriodIn,
+            currentPeriodOut = currentPeriodOut,
             daysLeftInPeriod = daysLeft,
             periodDateRangeStr = dateRangeStr,
             nextPaydayText = nextPaydayText,

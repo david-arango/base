@@ -266,15 +266,30 @@ class FinanceRepository(
             val existing = dao.getAllCategoriesList()
             if (existing.isEmpty()) {
                 val defaults = listOf(
-                    CategoryEntity(name = "Groceries", iconKey = "local_grocery_store", colorHex = 0xFF5B604BL),
-                    CategoryEntity(name = "Dining Out", iconKey = "restaurant", colorHex = 0xFF8C4A42L),
-                    CategoryEntity(name = "Bills & Utilities", iconKey = "receipt", colorHex = 0xFF4E6354L),
-                    CategoryEntity(name = "Transport", iconKey = "directions_subway", colorHex = 0xFF8F4C38L),
-                    CategoryEntity(name = "Shopping", iconKey = "shopping_bag", colorHex = 0xFF747968L),
-                    CategoryEntity(name = "Health", iconKey = "spa", colorHex = 0xFF3D6955L),
-                    CategoryEntity(name = "Entertainment", iconKey = "movie", colorHex = 0xFF8B6F5FL)
+                    CategoryEntity(name = "Groceries", iconKey = "local_grocery_store", colorHex = 0xFF2E7D32L),
+                    CategoryEntity(name = "Dining Out", iconKey = "restaurant", colorHex = 0xFFD35400L),
+                    CategoryEntity(name = "Bills & Utilities", iconKey = "receipt", colorHex = 0xFF2980B9L),
+                    CategoryEntity(name = "Transport", iconKey = "directions_subway", colorHex = 0xFFD48806L),
+                    CategoryEntity(name = "Shopping", iconKey = "shopping_bag", colorHex = 0xFF8E44ADL),
+                    CategoryEntity(name = "Health", iconKey = "spa", colorHex = 0xFF16A085L),
+                    CategoryEntity(name = "Entertainment", iconKey = "movie", colorHex = 0xFFC0392BL)
                 )
                 dao.insertCategories(defaults)
+            } else if (existing.all { it.colorHex == 0xFF5B604BL }) {
+                // Migrate previously seeded monochromatic colors to distinct vibrant colors
+                val colorMap = mapOf(
+                    "Groceries" to 0xFF2E7D32L,
+                    "Dining Out" to 0xFFD35400L,
+                    "Bills & Utilities" to 0xFF2980B9L,
+                    "Transport" to 0xFFD48806L,
+                    "Shopping" to 0xFF8E44ADL,
+                    "Health" to 0xFF16A085L,
+                    "Entertainment" to 0xFFC0392BL
+                )
+                existing.forEach { cat ->
+                    val newColor = colorMap[cat.name] ?: 0xFF546E7AL
+                    dao.updateCategory(cat.copy(colorHex = newColor))
+                }
             }
         }
     }
