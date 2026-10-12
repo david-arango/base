@@ -1,0 +1,167 @@
+================================================================================
+GOOGLE PLAY CONSOLE: DEFAULT STORE LISTING (BASE)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. LISTING DETAILS
+--------------------------------------------------------------------------------
+
+[FIELD: App name]
+Limit: 30 characters max
+Required: Yes
+
+Primary (27 chars):
+Base: Calm Personal Finance
+
+Alternative A - Simpler (26 chars):
+Base: Calm Expense Tracker
+
+Alternative B - Offline focus (27 chars):
+Base: Offline Budget & Flow
+
+Alternative C - Pure Brand (4 chars):
+Base
+
+--------------------------------------------------------------------------------
+
+[FIELD: Short description]
+Limit: 80 characters max
+Required: Yes
+
+Primary (78 chars):
+A calm, 100% offline personal finance tracker with perpetual rolling balances.
+
+Alternative A - Punchy (75 chars):
+Calm, 100% local finance. Perpetual rolling balance and zero cloud tracking.
+
+Alternative B - Feature-driven (76 chars):
+Private offline budgeting with perpetual rolling balance & automated income.
+
+--------------------------------------------------------------------------------
+
+[FIELD: Full description]
+Limit: 4,000 characters max (Google Play supports <b>, <i>, <u>, and bullet characters)
+Required: Yes
+Character count: 2,607 characters
+
+<b>Clarity over complexity. A calm, 100% local personal finance app.</b>
+
+Most budgeting apps are built for banks and advertisers—packed with account linking headaches, noisy notifications, cloud tracking, and arbitrary month-end resets.
+
+<b>Base</b> takes a tranquil, privacy-first approach. Engineered from the ground up to keep your financial life clear, distraction-free, and 100% on your device.
+
+━━━━━━━━━━━━━━━━━━━━
+<b>KEY FEATURES</b>
+━━━━━━━━━━━━━━━━━━━━
+
+• <b>Perpetual Rolling Balance</b>
+Financial life doesn't reset when the calendar flips to the 1st of the month. Base tracks a continuous, rolling cash flow balance so you always know your true liquidity and available runway across time.
+
+• <b>100% Offline & Completely Private</b>
+Your money is your business alone. All data is saved exclusively on your phone using an encrypted, on-device SQLite database (Android Room). No accounts to register, no cloud servers, no third-party analytics SDKs, and zero telemetry.
+
+• <b>Automated Income Engine</b>
+Eliminate repetitive manual entry. Set your regular income schedule (weekly, bi-weekly, semi-monthly, or monthly) and recurring salary amounts. Base automatically updates your ledger when payday arrives.
+
+• <b>Tactile Transaction Ledger</b>
+Log income and expenses in seconds with a responsive, high-contrast interface. Clean color hierarchy uses soothing forest sage for positive cash flow and warm terracotta for expenses.
+
+• <b>Custom Categories & Modals</b>
+Organize spending your way. Customize category names, icons, and baseline allocations tailored to your lifestyle.
+
+• <b>Tranquil Flow Analytics</b>
+Gain deep insight into your financial habits without the overwhelm. Visual breakdowns show spending distribution, income vs. expense balance, and net savings trends over time.
+
+• <b>Distraction-Free Experience</b>
+No advertisements, no upsells, no push notifications designed to induce anxiety, and no monthly subscription fees.
+
+• <b>Adaptive Material 3 Design</b>
+Crafted with modern Jetpack Compose for smooth 120Hz performance, edge-to-edge support, and seamless Light and Dark mode themes that adapt to your system preferences.
+
+━━━━━━━━━━━━━━━━━━━━
+<b>THE BASE PHILOSOPHY</b>
+━━━━━━━━━━━━━━━━━━━━
+
+✔ <b>Zero Bank Connections:</b> No Plaid, no MX, no passwords stored in the cloud.
+✔ <b>Zero Data Collection:</b> What happens on your device stays on your device.
+✔ <b>Offline First:</b> Fully functional with airplane mode enabled.
+✔ <b>Free & Open Source:</b> Complete transparency into how your data is handled.
+
+Take back peace of mind with your money. Download Base today.
+
+
+--------------------------------------------------------------------------------
+2. GRAPHICS ASSETS & SPECIFICATIONS
+--------------------------------------------------------------------------------
+
+[FIELD: App icon]
+Status: Required
+Specifications:
+- Dimensions: 512 x 512 pixels
+- Format: 32-bit PNG (with alpha)
+- Max file size: 1024 KB
+- Color space: sRGB
+- Generated Asset Location: play_store_assets/app_icon_512.png (512x512, 32bpp PNG)
+- Note: Google Play dynamically applies squircle corner rounding and drop shadow; do not add manual rounded corners or shadows to the source image.
+
+[FIELD: Feature graphic]
+Status: Required
+Specifications:
+- Dimensions: 1024 x 500 pixels
+- Format: JPEG or 24-bit PNG (no alpha)
+- Max file size: 15 MB
+- Generated Asset Location: play_store_assets/feature_graphic_1024x500.png (1024x500, 24bpp PNG)
+- Safe Zone: Central 800 x 400 px (to prevent cutoffs across TV, tablet, and mobile banners).
+
+[FIELD: Video (Optional)]
+Status: Optional
+Specifications:
+- URL: A public YouTube video URL (landscape 16:9).
+- Must have ads and monetization turned off.
+
+[FIELD: Phone screenshots]
+Status: Required (Minimum 2, Maximum 8)
+Specifications:
+- Format: JPEG or 24-bit PNG (no alpha)
+- Dimensions: 1080 x 2400 pixels (Format24bppRgb)
+- Status: All 6 screenshots generated and ready for direct upload in play_store_assets/
+
+Generated Screenshot Files:
+• play_store_assets/screenshot_1_rolling_balance.png
+  - Banner: "Perpetual Rolling Balance"
+  - Sub-copy: "Real-time liquidity across time, without artificial monthly resets"
+  - UI Screen: Main Ledger with Rolling Balance Card (+$3,420.50), active cycle status, and recent activity.
+
+• play_store_assets/screenshot_2_ledger_stream.png
+  - Banner: "Tactile Transaction Ledger"
+  - Sub-copy: "Log and review daily spending with effortless clarity"
+  - UI Screen: Continuous daily grouped transaction list with filters (All, Expenses, Income, Recurring).
+
+• play_store_assets/screenshot_3_income_engine.png
+  - Banner: "Automated Income Engine"
+  - Sub-copy: "Set your pay cadence once — automatic credits on payday"
+  - UI Screen: Income Engine Cadence modal with paycheck amount, frequency selector, and date picker.
+
+• play_store_assets/screenshot_4_flow_analytics.png
+  - Banner: "Tranquil Flow Analytics"
+  - Sub-copy: "Understand cash flow & spending trends without the anxiety"
+  - UI Screen: Flow Analytics screen with net savings rate, dual flow comparison bar, and category breakdown.
+
+• play_store_assets/screenshot_5_local_privacy.png
+  - Banner: "100% Local & Private"
+  - Sub-copy: "Zero cloud sync, zero trackers, zero accounts. Stored solely on device"
+  - UI Screen: Settings & Privacy shield card, on-device SQLite database status, and backup controls.
+
+• play_store_assets/screenshot_6_dark_mode.png
+  - Banner: "Calm by Design"
+  - Sub-copy: "Tactile organic tones with seamless Light & Dark themes"
+  - UI Screen: Dark mode UI view showcasing midnight-olive aesthetics and high-contrast typography.
+
+[FIELD: 7-inch tablet screenshots (Optional)]
+Status: Optional
+Specifications: JPEG or 24-bit PNG (no alpha), between 320 px and 3840 px. Up to 8 screenshots.
+
+[FIELD: 10-inch tablet screenshots (Optional)]
+Status: Optional
+Specifications: JPEG or 24-bit PNG (no alpha), between 1080 px and 7680 px. Up to 8 screenshots.
+================================================================================
