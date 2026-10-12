@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Base Budgeting App</title>
+
+    <!-- Roboto is commonly used in Android/Kotlin apps -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+      :root {
+        /* App-style palette: adjust these to match your exact colors */
+        --bg-start: #071024;   /* deep navy */
+        --bg-end:   #081223;   /* slightly different deep tone for gradient */
+        --panel:    rgba(255,255,255,0.04); /* translucent panel */
+        --primary:  #7b61ff;   /* purple (primary) */
+        --accent:   #2dd4bf;   /* teal (accent) */
+        --text:     #e6eef8;   /* near-white text */
+        --muted:    #b6c6d8;   /* muted description text */
+        --glass-border: rgba(123,97,255,0.14);
+        --shadow:   0 18px 40px rgba(3, 8, 19, 0.6);
+        --radius:   18px;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Roboto", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 80px 24px;
+      }
+
+      .card {
+        background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius);
+        padding: 36px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(8px) saturate(120%);
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 28px;
+        align-items: center;
+      }
+
+      /* Responsive: stack columns on narrow screens */
+      @media (max-width: 820px) {
+        .card { grid-template-columns: 1fr; padding: 28px; }
+      }
+
+      h1 {
+        margin: 0 0 8px 0;
+        font-size: clamp(2rem, 4.5vw, 3rem);
+        line-height: 1.05;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .highlight {
+        color: var(--primary);
+        background: linear-gradient(90deg, rgba(123,97,255,0.12), rgba(45,212,191,0.06));
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+
+      p {
+        color: var(--muted);
+        font-size: 1.02rem;
+        line-height: 1.65;
+        margin: 8px 0 0 0;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 18px;
+        padding: 10px 18px;
+        background: linear-gradient(90deg, rgba(123,97,255,0.12), rgba(45,212,191,0.06));
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 999px;
+        color: var(--text);
+        font-weight: 600;
+        cursor: default;
+      }
+
+      /* Call-to-action button */
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 18px;
+        padding: 12px 18px;
+        background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--accent) 30%, var(--primary)));
+        border: none;
+        color: white;
+        font-weight: 600;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(123,97,255,0.18);
+        text-decoration: none;
+      }
+
+      .meta {
+        font-size: 0.92rem;
+        color: var(--muted);
+        margin-top: 12px;
+      }
+
+      /* Right column: app card / preview */
+      .preview {
+        background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+        border-radius: 14px;
+        padding: 14px;
+        border: 1px solid rgba(255,255,255,0.03);
+        display:flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      .phone {
+        width: 220px;
+        height: 420px;
+        border-radius: 26px;
+        background: linear-gradient(180deg, #07132a, #051022);
+        box-shadow: inset 0 2px 6px rgba(255,255,255,0.02), 0 12px 36px rgba(3,8,19,0.6);
+        border: 1px solid rgba(255,255,255,0.03);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+        text-align: center;
+        padding: 18px;
+      }
+
+      .badge {
+        display:inline-block;
+        font-size: 0.78rem;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(45,212,191,0.10);
+        color: var(--accent);
+        border: 1px solid rgba(45,212,191,0.12);
+        font-weight:600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <div>
+          <h1>Welcome to <span class="highlight">Base</span></h1>
+          <p>
+            Base is a budgeting app designed to help you manage money, track spending,
+            and stay on top of your goals with a simple, focused experience.
+          </p>
+
+          <p class="meta">
+            This page is the starter for GitHub Pages for the Base project — styled to match the app.
+          </p>
+
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div class="pill">Base Budgeting App</div>
+            <a class="cta" href="#" aria-label="Get started with Base">Get started</a>
+            <div class="badge" aria-hidden="true">v1.0</div>
+          </div>
+        </div>
+
+        <aside class="preview" aria-hidden="true">
+          <div class="phone">
+            <div style="font-weight: 700; color: #e6eef8; font-size: 1.1rem; margin-bottom: 8px;">Base</div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #2dd4bf; margin-bottom: 12px;">$2,450.00</div>
+            <div style="display: flex; gap: 4px; width: 100%; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 16px;">
+              <div style="flex: 4; background: #2e7d32;"></div>
+              <div style="flex: 3; background: #d35400;"></div>
+              <div style="flex: 2; background: #2980b9;"></div>
+              <div style="flex: 1; background: #8e44ad;"></div>
+            </div>
+            App Preview
+            <div style="font-size:0.68rem; color:rgba(230,238,248,0.5); margin-top:8px;">
+              Flow Analytics & Perpetual Ledger
+            </div>
+          </div>
+          <div style="font-size:0.86rem; color:var(--muted);">Designed to match your app's color palette</div>
+        </aside>
+      </div>
+    </div>
+  </body>
+</html>

@@ -47,9 +47,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import com.example.ui.AnalyticsPeriod
 import com.example.ui.CategorySpend
 import com.example.ui.FinanceUiState
+import com.example.ui.theme.AnalyticsColorPalette
 import com.example.ui.theme.CalmNegativeDeep
 import com.example.ui.theme.CalmOnPrimary
 import com.example.ui.theme.CalmOnSecondaryContainer
@@ -71,6 +74,10 @@ fun AnalyticsScreen(
     onPeriodChange: (AnalyticsPeriod) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val distinctBreakdown = remember(uiState.rankedBreakdown) {
+        AnalyticsColorPalette.resolveDistinctCategoryColors(uiState.rankedBreakdown)
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp),
@@ -164,7 +171,7 @@ fun AnalyticsScreen(
 
         // Expense Distribution Card (Flow bar & legend pills)
         item {
-            ExpenseFlowCard(breakdown = uiState.rankedBreakdown)
+            ExpenseFlowCard(breakdown = distinctBreakdown)
         }
 
         // Ranked Breakdown Section Header
@@ -199,7 +206,7 @@ fun AnalyticsScreen(
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (uiState.rankedBreakdown.isEmpty()) {
+                if (distinctBreakdown.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -217,7 +224,7 @@ fun AnalyticsScreen(
                         modifier = Modifier.padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        uiState.rankedBreakdown.forEachIndexed { index, item ->
+                        distinctBreakdown.forEachIndexed { index, item ->
                             RankedCategoryItemCard(
                                 rank = index + 1,
                                 item = item
@@ -424,6 +431,7 @@ fun PeriodSummaryCard(uiState: FinanceUiState) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExpenseFlowCard(breakdown: List<CategorySpend>) {
     Surface(
@@ -454,51 +462,63 @@ fun ExpenseFlowCard(breakdown: List<CategorySpend>) {
                 )
             }
 
-            // Horizontal Proportional Segment Bar
+            // Horizontal Proportional Segment Bar with Hairline Dividers
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(14.dp)
+                    .height(16.dp)
                     .clip(RoundedCornerShape(9999.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    breakdown.forEach { item ->
-                        val weight = item.percentageOfSpend.coerceAtLeast(0.02f)
-                        Box(
-                            modifier = Modifier
-                                .weight(weight)
-                                .height(14.dp)
-                                .background(item.category.color)
-                        )
+                if (breakdown.isNotEmpty()) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        breakdown.forEachIndexed { index, item ->
+                            val weight = item.percentageOfSpend.coerceAtLeast(0.02f)
+                            Box(
+                                modifier = Modifier
+                                    .weight(weight)
+                                    .height(16.dp)
+                                    .background(item.category.color)
+                            )
+                            if (index < breakdown.lastIndex) {
+                                Spacer(
+                                    modifier = Modifier
+                                        .width(1.5.dp)
+                                        .height(16.dp)
+                                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // Legend Pills
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                breakdown.take(3).forEach { item ->
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(item.category.color)
-                        )
-                        val pct = (item.percentageOfSpend * 100).toInt()
-                        Text(
-                            text = "${item.category.name} $pct%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
+            // Legend Pills showing all active categories with distinct colors
+            if (breakdown.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    breakdown.forEach { item ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(item.category.color)
+                            )
+                            val pct = (item.percentageOfSpend * 100).toInt()
+                            Text(
+                                text = "${item.category.name} $pct%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }
