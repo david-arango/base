@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Base Budgeting App</title>
+  <meta name="description" content="Base is a 100% local, privacy-first personal budgeting application. Read our zero-tracking, zero-data-collection privacy policy." />
+
+  <!-- Favicon with Base SVG Logo -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%233A5A40' d='M16 0C7.16 0 0 7.16 0 16s7.16 16 16 16 16-7.16 16-16S24.84 0 16 0z'/%3E%3Cpath fill='%23A3B18A' d='M16 7a5 5 0 1 0 0.001 10.001A5 5 0 0 0 16 7z'/%3E%3Cpath fill='%23FFFFFF' d='M10 20h12a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2 2 2 0 0 1 2-2z'/%3E%3C/svg%3E" />
+
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Calm Finance Light Theme */
+      --bg: #F9F9F8;
+      --bg-subtle: #F2F1ED;
+      --surface: #FFFFFF;
+      --surface-container: #ECEBE5;
+      --border: #E2E2DF;
+      --border-subtle: #EDEDE9;
+      
+      --text-main: #181C1B;
+      --text-muted: #565D59;
+      --text-subtle: #848B87;
+
+      --brand-green: #3A5A40;
+      --brand-sage: #2B5A33;
+      --brand-sage-subtle: #EDF4EE;
+      --brand-sage-border: #BCD5C1;
+
+      --brand-terracotta: #8A3C30;
+      --brand-terracotta-subtle: #F9EFEF;
+
+      --shadow-sm: 0 2px 8px rgba(24, 28, 27, 0.04);
+      --shadow-md: 0 8px 24px rgba(24, 28, 27, 0.06);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 24px;
+      --radius-full: 9999px;
+
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="dark"] {
+      --bg: #121514;
+      --bg-subtle: #191E1C;
+      --surface: #1E2321;
+      --surface-container: #2E3532;
+      --border: #2F3633;
+      --border-subtle: #252B28;
+
+      --text-main: #F4F5F4;
+      --text-muted: #A3ACA7;
+      --text-subtle: #6D7671;
+
+      --brand-green: #588157;
+      --brand-sage: #6AA576;
+      --brand-sage-subtle: #192E1F;
+      --brand-sage-border: #2A4D33;
+
+      --brand-terracotta: #E27D6F;
+      --brand-terracotta-subtle: #361A16;
+
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Navbar */
+    header.navbar {
+      position: sticky;
+      top: 0;
+      z-index: 99;
+      background: rgba(249, 249, 248, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    [data-theme="dark"] header.navbar {
+      background: rgba(18, 21, 20, 0.85);
+    }
+
+    .nav-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .theme-toggle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--brand-sage);
+      padding: 8px 14px;
+      background: var(--brand-sage-subtle);
+      border: 1px solid var(--brand-sage-border);
+      border-radius: var(--radius-sm);
+    }
+    .back-link:hover {
+      opacity: 0.9;
+    }
+
+    /* Content Layout */
+    .content-wrapper {
+      max-width: 900px;
+      margin: 48px auto 80px;
+      padding: 0 24px;
+    }
+
+    .policy-header {
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 32px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--brand-sage-subtle);
+      border: 1px solid var(--brand-sage-border);
+      color: var(--brand-sage);
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+
+    .effective-date {
+      font-size: 0.95rem;
+      color: var(--text-subtle);
+      font-weight: 500;
+    }
+
+    /* Core TL;DR Card */
+    .tldr-card {
+      background: var(--surface);
+      border: 2px solid var(--brand-sage-border);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      margin-bottom: 40px;
+      box-shadow: var(--shadow-sm);
+    }
+    .tldr-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--brand-sage);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tldr-card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.96rem;
+      color: var(--text-muted);
+    }
+    .tldr-card li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .tldr-card li strong {
+      color: var(--text-main);
+    }
+
+    /* Policy Body */
+    .policy-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .policy-section h2 {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-main);
+    }
+
+    .policy-section p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+    .policy-section p:last-child {
+      margin-bottom: 0;
+    }
+
+    .policy-section ul {
+      margin: 12px 0 16px 24px;
+      color: var(--text-muted);
+    }
+    .policy-section li {
+      margin-bottom: 8px;
+    }
+    .policy-section li strong {
+      color: var(--text-main);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface);
+      padding: 40px 24px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .footer-container {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+    .footer-links a:hover {
+      color: var(--text-main);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <svg class="brand-icon" viewBox="0 0 32 32">
+          <path fill="#3A5A40" d="M16 0C7.16 0 0 7.16 0 16s7.16 16 16 16 16-7.16 16-16S24.84 0 16 0z"/>
+          <path fill="#A3B18A" d="M16 7a5 5 0 1 0 0.001 10.001A5 5 0 0 0 16 7z"/>
+          <path fill="#FFFFFF" d="M10 20h12a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2 2 2 0 0 1 2-2z"/>
+        </svg>
+        <span>Base</span>
+      </a>
+
+      <div class="nav-actions">
+        <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+          <span id="themeIcon">🌙</span>
+        </button>
+        <a href="index.html" class="back-link">
+          ← Back to Overview
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="content-wrapper">
+    <div class="policy-header">
+      <div class="badge-pill">
+        🛡️ Uncompromising Privacy
+      </div>
+      <h1>Privacy Policy</h1>
+      <div class="effective-date">
+        Last updated: October 2026 • Effective Date: October 12, 2026
+      </div>
+    </div>
+
+    <!-- Quick Summary -->
+    <div class="tldr-card">
+      <h3>The Summary (TL;DR)</h3>
+      <ul>
+        <li>✓ <strong>Zero Data Collection:</strong> We do not collect, view, transmit, monetize, or sell your financial data.</li>
+        <li>✓ <strong>100% Local Storage:</strong> Every transaction, account balance, and category stays strictly on your physical Android device in an on-device SQLite database.</li>
+        <li>✓ <strong>No Third-Party Trackers:</strong> No analytics SDKs, no behavioral trackers, no advertising frameworks, and no crash reports that phone home.</li>
+        <li>✓ <strong>Complete Control:</strong> Deleting the app or clearing its data permanently removes all information from your phone.</li>
+      </ul>
+    </div>
+
+    <!-- Section 1 -->
+    <section class="policy-section">
+      <h2>1. Information We Do Not Collect</h2>
+      <p>
+        Unlike traditional fintech applications, <strong>Base does not operate any backend servers or cloud databases</strong>. When you use Base, none of the following information is ever transmitted to us or any third party:
+      </p>
+      <ul>
+        <li><strong>Financial Records:</strong> Income figures, transaction descriptions, pay dates, amounts, categories, and account balances.</li>
+        <li><strong>Personal Identifiers:</strong> Your name, email address, phone number, physical address, or device IP address.</li>
+        <li><strong>Bank Credentials:</strong> Base never asks for, stores, or connects to your banking credentials, routing numbers, or payment accounts.</li>
+        <li><strong>Usage Telemetry:</strong> Features tapped, app session lengths, interaction heatmaps, or diagnostic profiling.</li>
+      </ul>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="policy-section">
+      <h2>2. How Your Data Is Stored (On-Device Storage)</h2>
+      <p>
+        All data generated within Base is saved locally on your Android device using Android Room and SQLite database technologies:
+      </p>
+      <ul>
+        <li>Your database file resides strictly in your device's private app sandbox. Other applications installed on your phone cannot access this data without your explicit permission or system root access.</li>
+        <li>No cloud synchronization takes place. If your device is offline, in Airplane mode, or completely disconnected from the internet, Base continues to function at 100% capability.</li>
+      </ul>
+    </section>
+
+    <!-- Section 3 -->
+    <section class="policy-section">
+      <h2>3. Device Permissions</h2>
+      <p>
+        Base follows the principle of minimal privilege. We only request operating system permissions strictly necessary for user-driven features:
+      </p>
+      <ul>
+        <li><strong>Notifications (Optional):</strong> If you choose to configure payday reminders or scheduled recurring transaction alerts, Android requires notification permissions to display them locally.</li>
+        <li><strong>No Network Permissions Required:</strong> Base does not require internet access to track budgets, compute rolling balances, or generate analytics.</li>
+      </ul>
+    </section>
+
+    <!-- Section 4 -->
+    <section class="policy-section">
+      <h2>4. Third-Party Services & Libraries</h2>
+      <p>
+        Base does not integrate third-party advertising SDKs, behavioral analytics suites (such as Google Analytics or Firebase), or social media tracking pixels.
+      </p>
+      <p>
+        The application is completely open source. You can inspect the complete dependency tree in our <a href="https://github.com/david-arango/base/blob/main/gradle/libs.versions.toml" target="_blank" rel="noopener" style="text-decoration: underline; color: var(--brand-sage);">libs.versions.toml</a> file to verify that only official Jetpack/AndroidX components and test frameworks are utilized.
+      </p>
+    </section>
+
+    <!-- Section 5 -->
+    <section class="policy-section">
+      <h2>5. Data Retention & Deletion</h2>
+      <p>
+        Because your data is stored solely on your device, you hold unconditional control over its retention:
+      </p>
+      <ul>
+        <li><strong>Individual Entries:</strong> You can delete any transaction or category at any time inside the app.</li>
+        <li><strong>Complete Wipe:</strong> You can permanently wipe all records by navigating to <em>Android Settings &gt; Apps &gt; Base &gt; Storage &gt; Clear Storage</em>, or by uninstalling the application. Once deleted, your data cannot be recovered by us, because we never possessed a copy.</li>
+      </ul>
+    </section>
+
+    <!-- Section 6 -->
+    <section class="policy-section">
+      <h2>6. Changes to This Privacy Policy</h2>
+      <p>
+        If we ever introduce optional features in future versions (such as manual encrypted local export/backup), this policy will be updated accordingly. All updates will be committed publicly to the GitHub repository changelog with full version history.
+      </p>
+    </section>
+
+    <!-- Section 7 -->
+    <section class="policy-section">
+      <h2>7. Contact & Source Code</h2>
+      <p>
+        If you have any questions or wish to audit the codebase, Base is maintained by <strong>David Arango</strong> as an open-source project.
+      </p>
+      <p>
+        You can reach out or file an issue via GitHub: <a href="https://github.com/david-arango/base/issues" target="_blank" rel="noopener" style="text-decoration: underline; color: var(--brand-sage);">github.com/david-arango/base/issues</a>.
+      </p>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg width="24" height="24" viewBox="0 0 32 32">
+          <path fill="#3A5A40" d="M16 0C7.16 0 0 7.16 0 16s7.16 16 16 16 16-7.16 16-16S24.84 0 16 0z"/>
+          <path fill="#A3B18A" d="M16 7a5 5 0 1 0 0.001 10.001A5 5 0 0 0 16 7z"/>
+          <path fill="#FFFFFF" d="M10 20h12a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2 2 2 0 0 1 2-2z"/>
+        </svg>
+        <strong>Base Budgeting App</strong> — <a href="index.html" style="text-decoration: underline;">Home</a>
+      </div>
+
+      <div class="footer-links">
+        <a href="privacy.html" style="color: var(--text-main); font-weight: 600;">Privacy Policy</a>
+        <a href="https://github.com/david-arango/base" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/david-arango/base/releases" target="_blank" rel="noopener">Releases</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Theme Script -->
+  <script>
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const htmlElement = document.documentElement;
+
+    const savedTheme = localStorage.getItem('base-theme');
+    if (savedTheme) {
+      htmlElement.setAttribute('data-theme', savedTheme);
+      themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      htmlElement.setAttribute('data-theme', 'dark');
+      themeIcon.textContent = '☀️';
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      const currentTheme = htmlElement.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('base-theme', newTheme);
+      themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    });
+  </script>
+</body>
+</html>
