@@ -20,6 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -46,7 +47,11 @@ jobs:
           if [ -z "$BUILD" ]; then BUILD=0; fi
 
           NEW_BUILD=$((BUILD + 1))
-          sed -i -E "s/^build=.*/build=$NEW_BUILD/" version.properties
+          if grep -q '^build=' version.properties; then
+            sed -i -E "s/^build=.*/build=$NEW_BUILD/" version.properties
+          else
+            echo "build=$NEW_BUILD" >> version.properties
+          fi
 
           VERSION="${MAJOR}.${MINOR}.${NEW_BUILD}"
           TAG_NAME="v${VERSION}"
@@ -60,12 +65,17 @@ jobs:
       - name: Decode Release Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
             echo "::error::GitHub secret KEYSTORE_BASE64 is missing or empty. Please add it to repository secrets."
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "${RUNNER_TEMP}/my-upload-key.jks"
+          if [ -z "$STORE_PASSWORD" ]; then
+            echo "::error::GitHub secret STORE_PASSWORD is missing or empty. Please add it to repository secrets."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "${RUNNER_TEMP}/my-upload-key.jks"
 
       - name: Build Release APK and Bundle
         env:
@@ -112,14 +122,13 @@ jobs:
           git add version.properties
           git commit -m "ci: bump version to ${TAG_NAME} [skip ci]"
           git tag -a "${TAG_NAME}" -m "Release ${TAG_NAME}"
-          git push origin main
+          git push origin HEAD:main
           git push origin "${TAG_NAME}"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.TAG_NAME }}
           name: Release ${{ env.TAG_NAME }}
           generate_release_notes: true
