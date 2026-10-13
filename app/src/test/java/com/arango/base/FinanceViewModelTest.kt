@@ -383,6 +383,41 @@ class FinanceViewModelTest {
     }
 
     @Test
+    fun importCsv_successful_createsRecordsAndShowsToast() = runTest(testDispatcher) {
+        repository.resetAllData()
+        waitForCondition { repository.allTransactions.first().isEmpty() }
+
+        val csv = """
+            ID,Date,Title,Category,Type,Amount,Note,Status
+            1,"2026-04-10 12:00:00","Bakery Sourdough","Groceries","EXPENSE",8.50,"Fresh bread","Settled"
+            2,"2026-04-01 09:00:00","Paycheck Deposit","Recurring Income","INCOME",2200.00,"Paycheck","Deposited"
+        """.trimIndent()
+
+        viewModel.importCsv(csv)
+        waitForCondition { viewModel.toastMessage.value?.contains("Successfully imported 2 transactions") == true }
+
+        val txs = repository.allTransactions.first()
+        assertEquals(2, txs.size)
+        assertTrue(txs.any { it.title == "Bakery Sourdough" && it.amount == 8.50 && it.isExpense })
+        assertTrue(txs.any { it.title == "Paycheck Deposit" && it.amount == 2200.00 && !it.isExpense })
+    }
+
+    @Test
+    fun importCsv_emptyCsv_showsNoTransactionsToast() = runTest(testDispatcher) {
+        viewModel.importCsv("")
+        waitForCondition { viewModel.toastMessage.value?.contains("No valid transactions found in CSV") == true }
+    }
+
+    @Test
+    fun importCsv_sheetOpenAndClose() = runTest(testDispatcher) {
+        assertFalse(viewModel.isImportCsvSheetOpen.value)
+        viewModel.openImportCsvSheet()
+        assertTrue(viewModel.isImportCsvSheetOpen.value)
+        viewModel.closeImportCsvSheet()
+        assertFalse(viewModel.isImportCsvSheetOpen.value)
+    }
+
+    @Test
     fun uiState_rankedBreakdownAndPeriodCalculations() = runTest(testDispatcher) {
         repository.resetAllData()
         waitForCondition { repository.allTransactions.first().isEmpty() }

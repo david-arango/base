@@ -134,6 +134,116 @@ class FinanceRepositoryTest {
     }
 
     @Test
+    fun importCsvData_readsExportFormat_createsAndBackdatesTransactions() = runBlocking {
+        repository.resetAllData()
+        val dayMillis = 24L * 60 * 60 * 1000
+        val backdate1 = System.currentTimeMillis() - (10 * dayMillis)
+        val backdate2 = System.currentTimeMillis() - (20 * dayMillis)
+
+        // Add 2 transactions with distinct historical dates
+        repository.insertTransaction(
+            TransactionEntity(
+                id = 0,
+                title = "Historical Grocery Trip",
+                category = "Groceries",
+                amount = 75.50,
+                isExpense = true,
+                timestamp = backdate1,
+                note = "Weekly groceries",
+                statusText = "Settled"
+            )
+        )
+        repository.insertTransaction(
+            TransactionEntity(
+                id = 0,
+                title = "Historical Paycheck",
+                category = "Recurring Income",
+                amount = 2500.00,
+                isExpense = false,
+                timestamp = backdate2,
+                note = "Paycheck",
+                statusText = "Deposited"
+            )
+        )
+
+        // Generate exact export
+        val exportedCsv = repository.generateCsvData()
+
+        // Clear all data
+        repository.resetAllData()
+        val txsBefore = repository.allTransactions.first()
+        assertTrue(txsBefore.isEmpty())
+
+        // Import the exact CSV export
+        val importedCount = repository.importCsvData(exportedCsv)
+        assertEquals(2, importedCount)
+
+        val txsAfter = repository.allTransactions.first()
+        assertEquals(2, txsAfter.size)
+
+        val groceryTx = txsAfter.first { it.title == "Historical Grocery Trip" }
+        assertEquals("Groceries", groceryTx.category)
+        assertEquals(75.50, groceryTx.amount, 0.001)
+        assertTrue(groceryTx.isExpense)
+        assertEquals("Weekly groceries", groceryTx.note)
+        assertEquals("Settled", groceryTx.statusText)
+        // Verify timestamp matches backdate1 within 1000ms (seconds precision of export format)
+        assertEquals(backdate1 / 1000, groceryTx.timestamp / 1000)
+
+        val paycheckTx = txsAfter.first { it.title == "Historical Paycheck" }
+        assertEquals("Recurring Income", paycheckTx.category)
+        assertEquals(2500.00, paycheckTx.amount, 0.001)
+        assertFalse(paycheckTx.isExpense)
+        assertEquals("Paycheck", paycheckTx.note)
+        assertEquals("Deposited", paycheckTx.statusText)
+        assertEquals(backdate2 / 1000, paycheckTx.timestamp / 1000)
+    }
+
+    @Test
+    fun importCsvData_handlesQuotedStringsAndCommas() = runBlocking {
+        repository.resetAllData()
+
+        val csv = "ID,Date,Title,Category,Type,Amount,Note,Status\n" +
+            "1,\"2026-05-15 14:30:00\",\"Special Coffee, Dark & Rich\",\"Dining Out\",\"EXPENSE\",6.75,\"Extra shot, oat milk\",\"Settled\"\n" +
+            "2,\"2026-05-16 18:00:00\",\"Novel \"\"A Great Story\"\"\",\"Shopping\",\"EXPENSE\",19.99,\"Bookstore purchase\",\"Settled\""
+
+        val count = repository.importCsvData(csv)
+        assertEquals(2, count)
+
+        val txs = repository.allTransactions.first()
+        val coffeeTx = txs.first { it.amount == 6.75 }
+        assertEquals("Special Coffee, Dark & Rich", coffeeTx.title)
+        assertEquals("Extra shot, oat milk", coffeeTx.note)
+
+        val bookTx = txs.first { it.amount == 19.99 }
+        assertEquals("Novel \"A Great Story\"", bookTx.title)
+    }
+
+    @Test
+    fun importCsvData_autoCreatesNewCategories() = runBlocking {
+        repository.resetAllData()
+
+        val csv = """
+            ID,Date,Title,Category,Type,Amount,Note,Status
+            1,"2026-06-01 10:00:00","Tesla Supercharger","EV Charging","EXPENSE",24.50,"Highway stop","Settled"
+        """.trimIndent()
+
+        val count = repository.importCsvData(csv)
+        assertEquals(1, count)
+
+        val categories = repository.allCategories.first()
+        assertTrue(categories.any { it.name == "EV Charging" })
+    }
+
+    @Test
+    fun importCsvData_emptyOrInvalidCsv_returnsZero() = runBlocking {
+        repository.resetAllData()
+        assertEquals(0, repository.importCsvData(""))
+        assertEquals(0, repository.importCsvData("   "))
+        assertEquals(0, repository.importCsvData("ID,Date,Title,Category,Type,Amount,Note,Status\n"))
+    }
+
+    @Test
     fun startingBalanceOffset_updatesPreference() = runBlocking {
         repository.setStartingBalanceOffset(350.75)
         val offset = repository.startingBalanceOffset.first()

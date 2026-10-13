@@ -1,10 +1,13 @@
 package com.arango.base
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
@@ -40,6 +43,7 @@ import com.arango.base.ui.FinanceViewModel
 import com.arango.base.ui.components.AppBottomNavigation
 import com.arango.base.ui.components.AppHeader
 import com.arango.base.ui.components.CategoryManagerSheet
+import com.arango.base.ui.components.ImportCsvSheet
 import com.arango.base.ui.components.IncomeEngineSheet
 import com.arango.base.ui.components.NewTransactionSheet
 import com.arango.base.ui.components.OffsetBudgetSheet
@@ -83,7 +87,17 @@ fun BaseApp(
     val isIncomeEngineOpen by viewModel.isIncomeEngineOpen.collectAsStateWithLifecycle()
     val isCategoryManagerOpen by viewModel.isCategoryManagerOpen.collectAsStateWithLifecycle()
     val isStartingBalanceOpen by viewModel.isStartingBalanceDialogOpen.collectAsStateWithLifecycle()
+    val isImportCsvOpen by viewModel.isImportCsvSheetOpen.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.importCsvFromUri(it)
+            viewModel.closeImportCsvSheet()
+        }
+    }
 
     // Check for any pending scheduled income when app is resumed
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -165,6 +179,7 @@ fun BaseApp(
                                 onOpenCategoryManager = { viewModel.openCategoryManager() },
                                 onOpenStartingBalanceDialog = { viewModel.openStartingBalanceDialog() },
                                 onExportCsv = { viewModel.exportCsv() },
+                                onImportCsv = { viewModel.openImportCsvSheet() },
                                 onResetData = { viewModel.resetAllData() },
                                 onRestoreDemoData = { viewModel.restoreDemoData() }
                             )
@@ -264,6 +279,26 @@ fun BaseApp(
             },
             onDeleteOffset = { id ->
                 viewModel.deleteOffsetTransaction(id)
+            }
+        )
+
+        ImportCsvSheet(
+            isOpen = isImportCsvOpen,
+            onDismiss = { viewModel.closeImportCsvSheet() },
+            onChooseFile = {
+                filePickerLauncher.launch(
+                    arrayOf(
+                        "text/comma-separated-values",
+                        "text/csv",
+                        "text/plain",
+                        "application/csv",
+                        "*/*"
+                    )
+                )
+            },
+            onImportText = { csvText ->
+                viewModel.importCsv(csvText)
+                viewModel.closeImportCsvSheet()
             }
         )
     }

@@ -2,6 +2,7 @@ package com.arango.base.ui
 
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.arango.base.data.local.AppDatabase
@@ -101,6 +102,9 @@ class FinanceViewModel @JvmOverloads constructor(
     private val _isOffsetBudgetDialogOpen = MutableStateFlow(false)
     val isOffsetBudgetDialogOpen: StateFlow<Boolean> = _isOffsetBudgetDialogOpen.asStateFlow()
     val isStartingBalanceDialogOpen: StateFlow<Boolean> get() = _isOffsetBudgetDialogOpen.asStateFlow()
+
+    private val _isImportCsvSheetOpen = MutableStateFlow(false)
+    val isImportCsvSheetOpen: StateFlow<Boolean> = _isImportCsvSheetOpen.asStateFlow()
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
@@ -353,6 +357,14 @@ class FinanceViewModel @JvmOverloads constructor(
 
     fun closeStartingBalanceDialog() = closeOffsetBudgetDialog()
 
+    fun openImportCsvSheet() {
+        _isImportCsvSheetOpen.value = true
+    }
+
+    fun closeImportCsvSheet() {
+        _isImportCsvSheetOpen.value = false
+    }
+
     fun showToast(message: String) {
         _toastMessage.value = message
     }
@@ -558,6 +570,43 @@ class FinanceViewModel @JvmOverloads constructor(
             val chooser = Intent.createChooser(intent, "Export Ledger CSV")
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             getApplication<Application>().startActivity(chooser)
+        }
+    }
+
+    suspend fun importCsvDirect(csvContent: String): Int {
+        return repository.importCsvData(csvContent)
+    }
+
+    fun importCsv(csvContent: String) {
+        viewModelScope.launch {
+            try {
+                val count = repository.importCsvData(csvContent)
+                if (count > 0) {
+                    showToast("Successfully imported $count transaction${if (count == 1) "" else "s"}")
+                } else {
+                    showToast("No valid transactions found in CSV")
+                }
+            } catch (e: Exception) {
+                showToast("Failed to import CSV: ${e.message ?: "Invalid format"}")
+            }
+        }
+    }
+
+    fun importCsvFromUri(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val context = getApplication<Application>()
+                val content = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.bufferedReader(Charsets.UTF_8).readText()
+                }
+                if (content.isNullOrBlank()) {
+                    showToast("Selected CSV file is empty")
+                    return@launch
+                }
+                importCsv(content)
+            } catch (e: Exception) {
+                showToast("Failed to read CSV file: ${e.message ?: "Error reading file"}")
+            }
         }
     }
 }
