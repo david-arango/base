@@ -722,8 +722,8 @@
         <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
           <span id="themeIcon">🌙</span>
         </button>
-        <a href="https://github.com/david-arango/base/releases" class="btn btn-primary" target="_blank" rel="noopener">
-          <span>Download APK</span>
+        <a href="https://github.com/david-arango/base/releases/latest/download/base.apk" class="btn btn-primary download-apk-btn" target="_blank" rel="noopener">
+          <span>Download APK</span><span class="apk-version-label"></span>
         </a>
       </div>
     </div>
@@ -746,13 +746,13 @@
         </p>
 
         <div class="hero-ctas">
-          <a href="https://github.com/david-arango/base/releases" class="btn btn-primary" target="_blank" rel="noopener">
+          <a href="https://github.com/david-arango/base/releases/latest/download/base.apk" class="btn btn-primary download-apk-btn" target="_blank" rel="noopener">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            Download Latest APK
+            <span>Download Latest APK</span><span class="apk-version-label"></span>
           </a>
           <a href="https://github.com/david-arango/base" class="btn btn-secondary" target="_blank" rel="noopener">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -955,8 +955,8 @@
         <h2>Start budgeting with peace of mind.</h2>
         <p>Download the standalone APK directly from GitHub or clone the repository to compile it locally in Android Studio.</p>
         <div class="hero-ctas" style="justify-content: center;">
-          <a href="https://github.com/david-arango/base/releases" class="btn btn-primary" target="_blank" rel="noopener">
-            Download Latest APK
+          <a href="https://github.com/david-arango/base/releases/latest/download/base.apk" class="btn btn-primary download-apk-btn" target="_blank" rel="noopener">
+            <span>Download Latest APK</span><span class="apk-version-label"></span>
           </a>
           <a href="https://github.com/david-arango/base" class="btn btn-secondary" target="_blank" rel="noopener">
             View Source Code
@@ -1049,6 +1049,25 @@
       const nextSample = sampleExpenses[expenseIdx % sampleExpenses.length];
       addTxBtn.textContent = `+ Add "${nextSample.title}" (-$${Math.abs(nextSample.amount).toFixed(2)})`;
     });
+
+    // Dynamically query latest release asset from GitHub API
+    fetch('https://api.github.com/repos/david-arango/base/releases/latest')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        const apk = (data.assets && data.assets.find(a => a.name.endsWith('.apk') && a.name !== 'base.apk')) ||
+                    (data.assets && data.assets.find(a => a.name.endsWith('.apk')));
+        if (apk) {
+          document.querySelectorAll('.download-apk-btn').forEach(btn => {
+            btn.href = apk.browser_download_url;
+            const label = btn.querySelector('.apk-version-label');
+            if (label && data.tag_name) {
+              label.textContent = ` (${data.tag_name})`;
+            }
+          });
+        }
+      })
+      .catch(() => {});
   </script>
 </body>
 </html>
