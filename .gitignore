@@ -19,3 +19,5 @@ debug.keystore
 *.jks
 *.apk
 *.aab
+*.zip
+mapping.txt
