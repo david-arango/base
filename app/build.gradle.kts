@@ -49,11 +49,11 @@ val computedVersionName = "v$majorVersion.$minorVersion.$buildCounter"
 val computedVersionCode = if (buildCounter > 0) buildCounter else 1
 
 android {
-  namespace = "com.example"
+  namespace = "com.arango.base"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.calmfinance.bsemvp"
+    applicationId = "com.arango.base"
     minSdk = 24
     targetSdk = 36
     versionCode = computedVersionCode
