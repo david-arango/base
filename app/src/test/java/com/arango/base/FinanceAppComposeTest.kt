@@ -276,6 +276,48 @@ class FinanceAppComposeTest {
     }
 
     @Test
+    fun settingsScreen_importCsvFlow() {
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                BaseApp()
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Navigate to Settings
+        composeTestRule.onNodeWithTag("nav_tab_settings").performClick()
+        composeTestRule.waitForIdle()
+
+        // Scroll to import CSV button
+        composeTestRule.onNodeWithTag("settings_lazy_column").performScrollToIndex(3)
+        composeTestRule.waitForIdle()
+
+        // Click Import CSV row
+        composeTestRule.onNodeWithTag("settings_import_csv_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        // Assert Import CSV Sheet opens
+        composeTestRule.onNodeWithTag("import_csv_choose_file_btn").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("import_csv_paste_input").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("import_csv_submit_btn").assertIsDisplayed()
+
+        // Enter CSV data into paste field
+        val sampleCsv = """
+            ID,Date,Title,Category,Type,Amount,Note,Status
+            1,"2026-03-20 11:00:00","Test Bakery","Dining Out","EXPENSE",12.50,"Lunch","Settled"
+        """.trimIndent()
+        composeTestRule.onNodeWithTag("import_csv_paste_input").performTextInput(sampleCsv)
+        composeTestRule.waitForIdle()
+
+        // Click Import button
+        composeTestRule.onNodeWithTag("import_csv_submit_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify toast or that sheet dismissed
+        composeTestRule.onNodeWithTag("settings_import_csv_btn").assertIsDisplayed()
+    }
+
+    @Test
     fun categoryManagerSheet_rendersAndDismisses() {
         var dismissed = false
 

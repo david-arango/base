@@ -8,6 +8,7 @@ import com.arango.base.data.local.FinanceDao
 import com.arango.base.data.local.IncomeEngineEntity
 import com.arango.base.data.local.OffsetTransactionEntity
 import com.arango.base.data.local.TransactionEntity
+import com.arango.base.data.model.CategoryVisuals
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -598,5 +599,233 @@ class FinanceRepository(
             sb.append("${tx.id},\"$dateStr\",\"$cleanTitle\",\"${tx.category}\",\"$typeStr\",$amtStr,\"$cleanNote\",\"${tx.statusText}\"\n")
         }
         sb.toString()
+    }
+
+    suspend fun importCsvData(csvContent: String): Int = withContext(ioDispatcher) {
+        val transactions = parseCsvToTransactions(csvContent)
+        if (transactions.isEmpty()) return@withContext 0
+
+        // Auto-create any new categories found in the CSV
+        val existingCategories = dao.getAllCategoriesList()
+        val existingNames = existingCategories.map { it.name.lowercase().trim() }.toSet()
+        val newCategories = transactions.map { it.category.trim() }
+            .filter { it.isNotBlank() && !existingNames.contains(it.lowercase()) && !it.equals("Recurring Income", ignoreCase = true) }
+            .distinct()
+            .map { catName ->
+                val iconKey = CategoryVisuals.findMatchingIconKey(catName) ?: "category"
+                val colorHex = CategoryVisuals.findMatchingColorHex(catName, iconKey)
+                CategoryEntity(name = catName, iconKey = iconKey, colorHex = colorHex)
+            }
+        if (newCategories.isNotEmpty()) {
+            dao.insertCategories(newCategories)
+        }
+
+        dao.insertTransactions(transactions)
+        transactions.size
+    }
+
+    fun parseCsvToTransactions(csvContent: String): List<TransactionEntity> {
+        val rows = parseCsv(csvContent)
+        if (rows.isEmpty()) return emptyList()
+
+        var dateCol = 1
+        var titleCol = 2
+        var categoryCol = 3
+        var typeCol = 4
+        var amountCol = 5
+        var noteCol = 6
+        var statusCol = 7
+
+        val firstRow = rows.first()
+        val isHeader = firstRow.any { cell ->
+            val lower = cell.lowercase().trim()
+            lower == "date" || lower == "title" || lower == "category" || lower == "amount" || lower == "type" || lower == "status"
+        }
+
+        val dataRows = if (isHeader) {
+            val headerMap = firstRow.mapIndexed { idx, name -> name.lowercase().trim() to idx }.toMap()
+            dateCol = headerMap["date"] ?: dateCol
+            titleCol = headerMap["title"] ?: titleCol
+            categoryCol = headerMap["category"] ?: categoryCol
+            typeCol = headerMap["type"] ?: typeCol
+            amountCol = headerMap["amount"] ?: amountCol
+            noteCol = headerMap["note"] ?: noteCol
+            statusCol = headerMap["status"] ?: statusCol
+            rows.drop(1)
+        } else {
+            rows
+        }
+
+        val transactions = mutableListOf<TransactionEntity>()
+
+        for (row in dataRows) {
+            if (row.all { it.isBlank() }) continue
+
+            val dateStr = row.getOrNull(dateCol)?.trim() ?: ""
+            val titleStr = row.getOrNull(titleCol)?.trim() ?: ""
+            val categoryStr = row.getOrNull(categoryCol)?.trim() ?: ""
+            val typeStr = row.getOrNull(typeCol)?.trim() ?: ""
+            val amountStr = row.getOrNull(amountCol)?.trim() ?: ""
+            val noteStr = row.getOrNull(noteCol)?.trim() ?: ""
+            val statusStr = row.getOrNull(statusCol)?.trim() ?: ""
+
+            val rawAmount = amountStr.replace("$", "").replace(",", "").trim()
+            val amount = abs(rawAmount.toDoubleOrNull() ?: 0.0)
+
+            if (amount <= 0.0) continue
+
+            val isExpense = when {
+                typeStr.equals("EXPENSE", ignoreCase = true) -> true
+                typeStr.equals("INCOME", ignoreCase = true) -> false
+                rawAmount.startsWith("-") -> true
+                else -> true
+            }
+
+            val category = if (categoryStr.isNotBlank()) categoryStr else "Other"
+            val title = when {
+                titleStr.isNotBlank() -> titleStr
+                category.isNotBlank() -> category
+                else -> "Transaction"
+            }
+
+            val timestamp = parseTimestamp(dateStr)
+            val statusText = if (statusStr.isNotBlank()) {
+                statusStr
+            } else {
+                if (isExpense) "Settled" else "Deposited"
+            }
+
+            val isAuto = !isExpense && (
+                title.contains("Paycheck", ignoreCase = true) ||
+                noteStr.contains("Paycheck", ignoreCase = true) ||
+                statusText.equals("Deposited", ignoreCase = true)
+            )
+
+            transactions.add(
+                TransactionEntity(
+                    id = 0,
+                    title = title,
+                    category = category,
+                    amount = amount,
+                    isExpense = isExpense,
+                    timestamp = timestamp,
+                    note = noteStr,
+                    isAuto = isAuto,
+                    statusText = statusText
+                )
+            )
+        }
+
+        return transactions
+    }
+
+    private fun parseTimestamp(dateStr: String): Long {
+        val trimmed = dateStr.trim()
+        if (trimmed.isEmpty()) return System.currentTimeMillis()
+
+        trimmed.toLongOrNull()?.let {
+            if (it > 1_000_000_000L) {
+                return if (it < 100_000_000_000L) it * 1000L else it
+            }
+        }
+
+        val dateFormats = listOf(
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd", Locale.US),
+            SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.US),
+            SimpleDateFormat("MM/dd/yyyy", Locale.US)
+        )
+
+        for (df in dateFormats) {
+            try {
+                val parsed = df.parse(trimmed)
+                if (parsed != null) return parsed.time
+            } catch (_: Exception) {}
+        }
+        return System.currentTimeMillis()
+    }
+
+    private fun parseCsv(csvText: String): List<List<String>> {
+        val rows = mutableListOf<List<String>>()
+        val currentRow = mutableListOf<String>()
+        val currentField = StringBuilder()
+        var inQuotes = false
+        var wasQuoted = false
+        var i = 0
+        val len = csvText.length
+
+        while (i < len) {
+            val c = csvText[i]
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < len && csvText[i + 1] == '"') {
+                        currentField.append('"')
+                        i++
+                    } else {
+                        inQuotes = false
+                    }
+                } else {
+                    currentField.append(c)
+                }
+            } else {
+                when {
+                    c == '"' && currentField.isEmpty() -> {
+                        inQuotes = true
+                        wasQuoted = true
+                    }
+                    c == ',' -> {
+                        val value = if (wasQuoted) currentField.toString() else currentField.toString().trim()
+                        currentRow.add(value)
+                        currentField.clear()
+                        wasQuoted = false
+                    }
+                    c == '\r' -> {
+                        if (i + 1 < len && csvText[i + 1] == '\n') {
+                            i++
+                        }
+                        val value = if (wasQuoted) currentField.toString() else currentField.toString().trim()
+                        currentRow.add(value)
+                        currentField.clear()
+                        wasQuoted = false
+                        if (currentRow.any { it.isNotBlank() }) {
+                            rows.add(currentRow.toList())
+                        }
+                        currentRow.clear()
+                    }
+                    c == '\n' -> {
+                        val value = if (wasQuoted) currentField.toString() else currentField.toString().trim()
+                        currentRow.add(value)
+                        currentField.clear()
+                        wasQuoted = false
+                        if (currentRow.any { it.isNotBlank() }) {
+                            rows.add(currentRow.toList())
+                        }
+                        currentRow.clear()
+                    }
+                    c.isWhitespace() && currentField.isEmpty() -> {
+                        // Skip leading whitespace before field or quote
+                    }
+                    wasQuoted && c.isWhitespace() -> {
+                        // Skip trailing whitespace after closing quote
+                    }
+                    else -> {
+                        currentField.append(c)
+                    }
+                }
+            }
+            i++
+        }
+
+        if (currentField.isNotEmpty() || wasQuoted || currentRow.isNotEmpty()) {
+            val value = if (wasQuoted) currentField.toString() else currentField.toString().trim()
+            currentRow.add(value)
+            if (currentRow.any { it.isNotBlank() }) {
+                rows.add(currentRow.toList())
+            }
+        }
+
+        return rows
     }
 }
