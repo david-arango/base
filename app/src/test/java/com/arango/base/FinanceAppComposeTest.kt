@@ -21,7 +21,7 @@ import com.arango.base.ui.components.CategoryManagerSheet
 import com.arango.base.ui.components.NewTransactionSheet
 import com.arango.base.ui.components.OffsetBudgetSheet
 import com.arango.base.ui.screens.LedgerScreen
-import com.arango.base.ui.theme.MyApplicationTheme
+import com.arango.base.ui.theme.BaseTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,7 +41,7 @@ class FinanceAppComposeTest {
     @Test
     fun bottomNavigation_switchesScreensCorrectly() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -78,7 +78,7 @@ class FinanceAppComposeTest {
     @Test
     fun ledgerScreen_opensNewTransactionSheetAndInteracts() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -108,7 +108,7 @@ class FinanceAppComposeTest {
     @Test
     fun ledgerScreen_addNewTransactionAndSave() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -137,7 +137,7 @@ class FinanceAppComposeTest {
     @Test
     fun settingsScreen_resetDialogFlow() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -164,7 +164,7 @@ class FinanceAppComposeTest {
     @Test
     fun settingsScreen_incomeEngineSheetFlow() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -190,7 +190,7 @@ class FinanceAppComposeTest {
     @Test
     fun settingsScreen_startingBalanceDialogFlow() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -221,7 +221,7 @@ class FinanceAppComposeTest {
     @Test
     fun settingsScreen_categoryManagerSheetFlow() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -253,7 +253,7 @@ class FinanceAppComposeTest {
     @Test
     fun settingsScreen_exportCsvFlow() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -278,7 +278,7 @@ class FinanceAppComposeTest {
     @Test
     fun settingsScreen_importCsvFlow() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }
@@ -322,7 +322,7 @@ class FinanceAppComposeTest {
         var dismissed = false
 
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 CategoryManagerSheet(
                     isOpen = true,
                     categories = DefaultCategories.list,
@@ -343,13 +343,14 @@ class FinanceAppComposeTest {
         assertTrue(dismissed)
     }
 
+    @Suppress("DEPRECATION")
     @Test
     fun startingBalanceDialog_inputAndConfirmation() {
         var confirmedValue: Double? = null
         var dismissed = false
 
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 com.arango.base.ui.components.StartingBalanceDialog(
                     isOpen = true,
                     currentOffset = 0.0,
@@ -382,7 +383,7 @@ class FinanceAppComposeTest {
         var savedNote: String? = null
 
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 NewTransactionSheet(
                     isOpen = true,
                     onDismiss = {},
@@ -427,7 +428,7 @@ class FinanceAppComposeTest {
         var savedNote: String? = null
 
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 NewTransactionSheet(
                     isOpen = true,
                     transactionToEdit = originalTx,
@@ -482,7 +483,7 @@ class FinanceAppComposeTest {
         var deletedId: Long? = null
 
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 NewTransactionSheet(
                     isOpen = true,
                     transactionToEdit = originalTx,
@@ -534,7 +535,7 @@ class FinanceAppComposeTest {
         var deletedId: Long? = null
 
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 LedgerScreen(
                     uiState = FinanceUiState(
                         transactions = listOf(testTx)
@@ -579,7 +580,7 @@ class FinanceAppComposeTest {
         var deletedId: Long? = null
 
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 OffsetBudgetSheet(
                     isOpen = true,
                     currentOffset = 150.0,
@@ -620,7 +621,7 @@ class FinanceAppComposeTest {
         var addedNote: String? = null
 
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 OffsetBudgetSheet(
                     isOpen = true,
                     currentOffset = 0.0,
@@ -647,7 +648,7 @@ class FinanceAppComposeTest {
     @Test
     fun settingsScreen_restoreDemoDataIsHidden() {
         composeTestRule.setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }

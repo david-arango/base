@@ -47,12 +47,11 @@ import com.arango.base.ui.components.ImportCsvSheet
 import com.arango.base.ui.components.IncomeEngineSheet
 import com.arango.base.ui.components.NewTransactionSheet
 import com.arango.base.ui.components.OffsetBudgetSheet
-import com.arango.base.ui.components.StartingBalanceDialog
 import com.arango.base.ui.screens.AnalyticsScreen
 import com.arango.base.ui.screens.LedgerScreen
 import com.arango.base.ui.screens.SettingsScreen
 import com.arango.base.ui.theme.CalmPrimary
-import com.arango.base.ui.theme.MyApplicationTheme
+import com.arango.base.ui.theme.BaseTheme
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -69,7 +68,7 @@ class MainActivity : ComponentActivity() {
             )
         )
         setContent {
-            MyApplicationTheme {
+            BaseTheme {
                 BaseApp()
             }
         }

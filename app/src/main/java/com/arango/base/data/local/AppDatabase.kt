@@ -73,7 +73,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "calm_finance_base.db"
                 )
                     .addMigrations(MIGRATION_2_3, MIGRATION_1_3)
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance
                 instance
