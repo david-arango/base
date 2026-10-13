@@ -14,37 +14,18 @@ plugins {
 
 val versionPropsFile = rootProject.file("version.properties")
 
-fun getOrUpdateVersion(): Triple<Int, Int, Int> {
+fun getVersion(): Triple<Int, Int, Int> {
   val props = Properties()
   if (versionPropsFile.exists()) {
     FileInputStream(versionPropsFile).use { props.load(it) }
   }
   val major = (props.getProperty("major") ?: "1").toIntOrNull() ?: 1
   val minor = (props.getProperty("minor") ?: "0").toIntOrNull() ?: 0
-  val currentBuild = (props.getProperty("build") ?: "0").toIntOrNull() ?: 0
-
-  val taskNames = gradle.startParameter.taskNames
-  val isNonBuildTask = taskNames.any {
-    it.equals("tasks", ignoreCase = true) ||
-    it.equals("help", ignoreCase = true) ||
-    it.contains("dependencies", ignoreCase = true)
-  }
-
-  val newBuild = if (!isNonBuildTask) currentBuild + 1 else currentBuild
-
-  if (!isNonBuildTask || !versionPropsFile.exists()) {
-    props.setProperty("major", major.toString())
-    props.setProperty("minor", minor.toString())
-    props.setProperty("build", newBuild.toString())
-    FileOutputStream(versionPropsFile).use {
-      props.store(it, "Build Version Properties")
-    }
-  }
-
-  return Triple(major, minor, newBuild)
+  val build = (props.getProperty("build") ?: "0").toIntOrNull() ?: 0
+  return Triple(major, minor, build)
 }
 
-val (majorVersion, minorVersion, buildCounter) = getOrUpdateVersion()
+val (majorVersion, minorVersion, buildCounter) = getVersion()
 val computedVersionName = "v$majorVersion.$minorVersion.$buildCounter"
 val computedVersionCode = if (buildCounter > 0) buildCounter else 1
 
@@ -71,8 +52,8 @@ android {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       storeFile = file(keystorePath)
       storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
+      keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("STORE_PASSWORD")
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
