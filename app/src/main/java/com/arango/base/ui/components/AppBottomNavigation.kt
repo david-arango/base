@@ -18,11 +18,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.PieChart
-import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.ripple
 import androidx.compose.material3.HorizontalDivider
@@ -66,8 +66,8 @@ fun AppBottomNavigation(
         NavItem(
             screen = AppScreen.LEDGER,
             label = "Ledger",
-            activeIcon = Icons.Filled.ReceiptLong,
-            inactiveIcon = Icons.Outlined.ReceiptLong,
+            activeIcon = Icons.AutoMirrored.Filled.ReceiptLong,
+            inactiveIcon = Icons.AutoMirrored.Outlined.ReceiptLong,
             tag = "nav_tab_ledger"
         ),
         NavItem(

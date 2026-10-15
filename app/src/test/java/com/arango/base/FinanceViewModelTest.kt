@@ -52,7 +52,7 @@ class FinanceViewModelTest {
             .build()
         repository = FinanceRepository(application, db.financeDao())
         viewModel = FinanceViewModel(application, repository, SharingStarted.Eagerly)
-        waitForCondition { repository.allTransactions.first().isNotEmpty() }
+        waitForCondition { repository.allCategories.first().isNotEmpty() }
     }
 
     @After
@@ -274,7 +274,6 @@ class FinanceViewModelTest {
 
     @Test
     fun addMultipleOffsetTransactions_logsAllOffsetsAndUpdatesBalance() = runTest(testDispatcher) {
-        waitForCondition { viewModel.uiState.value.transactions.isNotEmpty() }
         repository.clearAllOffsetTransactions()
         waitForCondition { viewModel.uiState.value.offsetTransactions.isEmpty() }
 
@@ -339,17 +338,21 @@ class FinanceViewModelTest {
     }
 
     @Test
-    fun restoreDemoData_repopulatesTransactionsAndShowsToast() = runTest(testDispatcher) {
-        repository.resetAllData()
-        waitForCondition { repository.allTransactions.first().isEmpty() }
+    fun importDemoCsv_populatesTransactionsAndShowsToast() = runTest(testDispatcher) {
+        val demoCsv = """
+            ID,Date,Title,Category,Type,Amount,Note,Status
+            1,"2026-10-14 21:30:00","Trader Joe's organic basket","Groceries","EXPENSE",64.20,"Groceries","Settled"
+            2,"2026-10-14 17:30:00","Morning pour-over coffee","Dining Out","EXPENSE",4.75,"Dining Out","Settled"
+            3,"2026-10-11 13:30:00","Bi-Weekly Paycheck","Recurring Income","INCOME",2100.00,"Paycheck","Deposited"
+        """.trimIndent()
 
-        viewModel.restoreDemoData()
+        viewModel.importCsv(demoCsv)
         waitForCondition { viewModel.toastMessage.value != null }
 
         assertNotNull(viewModel.toastMessage.value)
-        assertTrue(viewModel.toastMessage.value!!.contains("Demo sample data restored"))
+        assertTrue(viewModel.toastMessage.value!!.contains("Successfully imported 3 transactions"))
         val txs = repository.allTransactions.first()
-        assertTrue(txs.isNotEmpty())
+        assertEquals(3, txs.size)
     }
 
     @Test
@@ -561,5 +564,59 @@ class FinanceViewModelTest {
 
         waitForCondition { viewModel.toastMessage.value != null }
         assertTrue(viewModel.toastMessage.value!!.contains("1,900.00"))
+    }
+
+    @Test
+    fun onboardingWizard_openAndClose_updatesState() = runTest(testDispatcher) {
+        assertFalse(viewModel.isOnboardingWizardOpen.value)
+
+        viewModel.openOnboardingWizard()
+        assertTrue(viewModel.isOnboardingWizardOpen.value)
+
+        viewModel.closeOnboardingWizard()
+        assertFalse(viewModel.isOnboardingWizardOpen.value)
+    }
+
+    @Test
+    fun dismissOnboardingOverlay_setsCompletedTrue() = runTest(testDispatcher) {
+        viewModel.dismissOnboardingOverlay()
+        waitForCondition { repository.hasCompletedOnboarding.first() }
+        assertTrue(repository.hasCompletedOnboarding.first())
+    }
+
+    @Test
+    fun completeOnboarding_updatesStartingBalanceIncomeAndClosesWizard() = runTest(testDispatcher) {
+        viewModel.openOnboardingWizard()
+        assertTrue(viewModel.isOnboardingWizardOpen.value)
+
+        val incomeConfig = IncomeEngineEntity(
+            id = 1,
+            expectedIncome = 2800.0,
+            cadence = "Bi-Weekly",
+            nextPaydayTimestamp = System.currentTimeMillis() + 86400000L * 10,
+            isActive = true
+        )
+
+        viewModel.completeOnboarding(
+            startingBalance = 1500.0,
+            incomeConfig = incomeConfig
+        )
+
+        waitForCondition { !viewModel.isOnboardingWizardOpen.value }
+        assertFalse(viewModel.isOnboardingWizardOpen.value)
+
+        waitForCondition { repository.hasCompletedOnboarding.first() }
+        assertTrue(repository.hasCompletedOnboarding.first())
+
+        waitForCondition { repository.totalOffset.first() == 1500.0 }
+        assertEquals(1500.0, repository.totalOffset.first(), 0.001)
+
+        val storedIncome = repository.incomeEngineConfig.first()
+        assertNotNull(storedIncome)
+        assertEquals(2800.0, storedIncome!!.expectedIncome, 0.001)
+        assertTrue(storedIncome.isActive)
+
+        waitForCondition { viewModel.toastMessage.value != null }
+        assertTrue(viewModel.toastMessage.value!!.contains("Setup complete"))
     }
 }

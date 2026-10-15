@@ -1,0 +1,135 @@
+name: Release Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Auto-increment Build Version
+        run: |
+          MAJOR=$(grep '^major=' version.properties | cut -d'=' -f2 | tr -d '\r\n[:space:]')
+          MINOR=$(grep '^minor=' version.properties | cut -d'=' -f2 | tr -d '\r\n[:space:]')
+          BUILD=$(grep '^build=' version.properties | cut -d'=' -f2 | tr -d '\r\n[:space:]')
+
+          if [ -z "$MAJOR" ]; then MAJOR=1; fi
+          if [ -z "$MINOR" ]; then MINOR=0; fi
+          if [ -z "$BUILD" ]; then BUILD=0; fi
+
+          NEW_BUILD=$((BUILD + 1))
+          if grep -q '^build=' version.properties; then
+            sed -i -E "s/^build=.*/build=$NEW_BUILD/" version.properties
+          else
+            echo "build=$NEW_BUILD" >> version.properties
+          fi
+
+          VERSION="${MAJOR}.${MINOR}.${NEW_BUILD}"
+          TAG_NAME="v${VERSION}"
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "NEW_BUILD=$NEW_BUILD" >> $GITHUB_ENV
+
+          echo "Auto-incremented build counter to $NEW_BUILD ($TAG_NAME)"
+
+      - name: Decode Release Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::GitHub secret KEYSTORE_BASE64 is missing or empty. Please add it to repository secrets."
+            exit 1
+          fi
+          if [ -z "$STORE_PASSWORD" ]; then
+            echo "::error::GitHub secret STORE_PASSWORD is missing or empty. Please add it to repository secrets."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "${RUNNER_TEMP}/my-upload-key.jks"
+
+      - name: Build Release APK and Bundle
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/my-upload-key.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'upload' }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.STORE_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease bundleRelease
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release-assets
+
+          # Copy APKs
+          cp app/build/outputs/apk/release/app-release.apk "release-assets/Base-${TAG_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "release-assets/base.apk"
+
+          # Copy Bundle
+          cp app/build/outputs/bundle/release/app-release.aab "release-assets/Base-${TAG_NAME}.aab"
+
+          # Copy ProGuard/R8 Mapping
+          if [ -f app/build/outputs/mapping/release/mapping.txt ]; then
+            cp app/build/outputs/mapping/release/mapping.txt release-assets/mapping.txt
+          fi
+
+          # Copy Native Debug Symbols if generated
+          if [ -f app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip ]; then
+            cp app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip release-assets/native-debug-symbols.zip
+          else
+            SYMBOLS_FILE=$(find app/build/outputs -name "*native-debug-symbols*.zip" 2>/dev/null | head -n 1)
+            if [ -n "$SYMBOLS_FILE" ] && [ -f "$SYMBOLS_FILE" ]; then
+              cp "$SYMBOLS_FILE" release-assets/native-debug-symbols.zip
+            fi
+          fi
+
+          echo "Listing staged release assets:"
+          ls -lh release-assets/
+
+      - name: Commit and Push Version Bump & Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.properties
+          git commit -m "ci: bump version to ${TAG_NAME} [skip ci]"
+          git tag -a "${TAG_NAME}" -m "Release ${TAG_NAME}"
+          git push origin HEAD:main
+          git push origin "${TAG_NAME}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.TAG_NAME }}
+          generate_release_notes: true
+          files: release-assets/*

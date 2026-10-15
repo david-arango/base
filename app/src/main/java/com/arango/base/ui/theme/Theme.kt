@@ -90,7 +90,7 @@ private val CalmDarkColorScheme =
   )
 
 @Composable
-fun MyApplicationTheme(
+fun BaseTheme(
   darkTheme: Boolean = false,
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
@@ -100,3 +100,17 @@ fun MyApplicationTheme(
 
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
+
+@Deprecated(
+  message = "Use BaseTheme instead for consistent naming",
+  replaceWith = ReplaceWith("BaseTheme(darkTheme, dynamicColor, content)")
+)
+@Composable
+fun MyApplicationTheme(
+  darkTheme: Boolean = false,
+  dynamicColor: Boolean = false,
+  content: @Composable () -> Unit,
+) {
+  BaseTheme(darkTheme, dynamicColor, content)
+}
+

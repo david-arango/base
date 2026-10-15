@@ -1,6 +1,7 @@
 package com.arango.base.data.model
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -41,7 +42,7 @@ object CategoryVisuals {
         "gaming" to Icons.Filled.SportsEsports,
         "trading_cards" to Icons.Filled.Style,
         "puzzles" to Icons.Filled.Extension,
-        "books" to Icons.Filled.MenuBook,
+        "books" to Icons.AutoMirrored.Filled.MenuBook,
         "sports" to Icons.Filled.SportsSoccer,
         "hiking" to Icons.Filled.Hiking,
 

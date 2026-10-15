@@ -1,23 +1,35 @@
+# Gradle and build artifacts
+.gradle/
+.kotlin/
+build/
+/build/
+app/build/
+release-assets/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Android Studio / IntelliJ IDEA
 *.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+.idea/
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+
+# Local configuration and environment
 local.properties
 .env
-debug.keystore
+.env.*
+!.env.example
+
+# Keystores and signing credentials
 *.jks
+*.keystore
+debug.keystore
+
+# Build packages and debug symbols
 *.apk
 *.aab
 *.zip
 mapping.txt
+
+# AI Studio and local tooling caches
+.aistudio/
