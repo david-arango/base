@@ -106,6 +106,16 @@ class FinanceViewModel @JvmOverloads constructor(
     private val _isImportCsvSheetOpen = MutableStateFlow(false)
     val isImportCsvSheetOpen: StateFlow<Boolean> = _isImportCsvSheetOpen.asStateFlow()
 
+    private val _isOnboardingWizardOpen = MutableStateFlow(false)
+    val isOnboardingWizardOpen: StateFlow<Boolean> = _isOnboardingWizardOpen.asStateFlow()
+
+    val hasCompletedOnboarding: StateFlow<Boolean> = repository.hasCompletedOnboarding
+        .stateIn(
+            scope = viewModelScope,
+            started = sharingStarted,
+            initialValue = true
+        )
+
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
@@ -363,6 +373,37 @@ class FinanceViewModel @JvmOverloads constructor(
 
     fun closeImportCsvSheet() {
         _isImportCsvSheetOpen.value = false
+    }
+
+    fun openOnboardingWizard() {
+        _isOnboardingWizardOpen.value = true
+    }
+
+    fun closeOnboardingWizard() {
+        _isOnboardingWizardOpen.value = false
+    }
+
+    fun dismissOnboardingOverlay() {
+        viewModelScope.launch {
+            repository.setCompletedOnboarding(true)
+        }
+    }
+
+    fun completeOnboarding(
+        startingBalance: Double,
+        incomeConfig: IncomeEngineEntity?
+    ) {
+        viewModelScope.launch {
+            if (abs(startingBalance) > 0.0001) {
+                repository.setStartingBalanceOffset(startingBalance)
+            }
+            if (incomeConfig != null && incomeConfig.isActive && incomeConfig.expectedIncome > 0.0) {
+                repository.updateIncomeEngine(incomeConfig)
+            }
+            repository.setCompletedOnboarding(true)
+            _isOnboardingWizardOpen.value = false
+            _toastMessage.value = "Setup complete! Welcome to Base."
+        }
     }
 
     fun showToast(message: String) {

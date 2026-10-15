@@ -34,6 +34,14 @@ class FinanceRepository(
 
     // Backward-compatible alias for existing tests and consumers
     val startingBalanceOffset: Flow<Double> = dao.getTotalOffsetFlow()
+    val hasCompletedOnboarding: Flow<Boolean> = dao.getPreferenceFlow("has_completed_onboarding")
+        .map { it == "true" }
+
+    suspend fun setCompletedOnboarding(completed: Boolean) {
+        withContext(ioDispatcher) {
+            dao.setPreference(AppPreferenceEntity("has_completed_onboarding", completed.toString()))
+        }
+    }
 
     suspend fun insertTransaction(transaction: TransactionEntity): Long {
         return dao.insertTransaction(transaction)
@@ -315,6 +323,7 @@ class FinanceRepository(
             dao.setPreference(AppPreferenceEntity("starting_balance_offset", "0.0"))
             dao.setPreference(AppPreferenceEntity("migrated_starting_balance_to_offset", "true"))
             dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
+            dao.setPreference(AppPreferenceEntity("has_completed_onboarding", "true"))
             dao.setIncomeEngineConfig(
                 IncomeEngineEntity(
                     id = 1,

@@ -462,4 +462,15 @@ class FinanceRepositoryTest {
         val config = repository.incomeEngineConfig.first()
         assertTrue(config!!.nextPaydayTimestamp > originalPayday)
     }
+
+    @Test
+    fun onboardingPreference_persistsAndEmitsCorrectly() = runBlocking {
+        assertFalse(repository.hasCompletedOnboarding.first())
+
+        repository.setCompletedOnboarding(true)
+        assertTrue(repository.hasCompletedOnboarding.first())
+
+        repository.setCompletedOnboarding(false)
+        assertFalse(repository.hasCompletedOnboarding.first())
+    }
 }

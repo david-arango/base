@@ -38,6 +38,16 @@ class FinanceAppComposeTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    @org.junit.Before
+    fun setup() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        kotlinx.coroutines.runBlocking {
+            com.arango.base.data.local.AppDatabase.getInstance(context).financeDao().setPreference(
+                com.arango.base.data.local.AppPreferenceEntity("has_completed_onboarding", "true")
+            )
+        }
+    }
+
     @Test
     fun bottomNavigation_switchesScreensCorrectly() {
         composeTestRule.setContent {
@@ -671,5 +681,131 @@ class FinanceAppComposeTest {
         composeTestRule.onNodeWithTag("settings_starting_balance_row").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("starting_balance_display").assertIsDisplayed()
+    }
+
+    @Test
+    fun welcomeOverlayCard_displayedOnFreshLaunch_andDismissesOnExplore() {
+        val app = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>()
+        val db = com.arango.base.data.local.AppDatabase.getInstance(app)
+        val repository = com.arango.base.data.repository.FinanceRepository(app, db.financeDao())
+        kotlinx.coroutines.runBlocking {
+            repository.setCompletedOnboarding(false)
+        }
+        val testVm = com.arango.base.ui.FinanceViewModel(app, repository, kotlinx.coroutines.flow.SharingStarted.Eagerly)
+
+        composeTestRule.setContent {
+            BaseTheme {
+                BaseApp(viewModel = testVm)
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithTag("welcome_explore_button").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        composeTestRule.onNodeWithTag("welcome_help_setup_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("welcome_explore_button").assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag("welcome_explore_button").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithTag("welcome_explore_button").fetchSemanticsNodes().isEmpty()
+        }
+        composeTestRule.onAllNodesWithTag("welcome_explore_button").assertCountEquals(0)
+        composeTestRule.onNodeWithTag("fab_add_transaction").assertIsDisplayed()
+    }
+
+    @Test
+    fun welcomeOverlayCard_helpMeSetup_walksThroughWizardAndCompletes() {
+        val app = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>()
+        val db = com.arango.base.data.local.AppDatabase.getInstance(app)
+        val repository = com.arango.base.data.repository.FinanceRepository(app, db.financeDao())
+        kotlinx.coroutines.runBlocking {
+            repository.setCompletedOnboarding(false)
+        }
+        val testVm = com.arango.base.ui.FinanceViewModel(app, repository, kotlinx.coroutines.flow.SharingStarted.Eagerly)
+
+        composeTestRule.setContent {
+            BaseTheme {
+                BaseApp(viewModel = testVm)
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.waitUntil(3000) {
+            composeTestRule.onAllNodesWithTag("welcome_help_setup_button").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        composeTestRule.onNodeWithTag("welcome_help_setup_button").performClick()
+        composeTestRule.waitForIdle()
+
+        // Wizard is opened on Page 0
+        composeTestRule.waitUntil(3000) {
+            composeTestRule.onAllNodesWithTag("onboarding_wizard_surface").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag("onboarding_wizard_surface").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("onboarding_philosophy_continue_button").assertIsDisplayed()
+
+        // Advance to Page 1 (Balance)
+        composeTestRule.onNodeWithTag("onboarding_philosophy_continue_button").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("onboarding_starting_balance_field").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("onboarding_starting_balance_field").performTextInput("1250")
+        composeTestRule.waitForIdle()
+
+        // Advance to Page 2 (Income)
+        composeTestRule.onNodeWithTag("onboarding_balance_continue_button").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("onboarding_income_amount_field").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("onboarding_income_amount_field").performTextInput("2400")
+        composeTestRule.waitForIdle()
+
+        // Advance to Page 3 (All Set)
+        composeTestRule.onNodeWithTag("onboarding_income_continue_button").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("onboarding_start_tracking_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("onboarding_start_tracking_button").performClick()
+        composeTestRule.waitForIdle()
+
+        // Wizard dismissed, back on Ledger
+        composeTestRule.waitUntil(3000) {
+            composeTestRule.onAllNodesWithTag("onboarding_wizard_surface").fetchSemanticsNodes().isEmpty()
+        }
+        composeTestRule.onAllNodesWithTag("onboarding_wizard_surface").assertCountEquals(0)
+        composeTestRule.onNodeWithTag("fab_add_transaction").assertIsDisplayed()
+    }
+
+    @Test
+    fun settingsScreen_revisitOnboarding_opensWizard() {
+        composeTestRule.setContent {
+            BaseTheme {
+                BaseApp()
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Navigate to Settings
+        composeTestRule.onNodeWithTag("nav_tab_settings").performClick()
+        composeTestRule.waitForIdle()
+
+        // Click Revisit Onboarding row
+        composeTestRule.onNodeWithTag("settings_revisit_onboarding_btn").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("settings_revisit_onboarding_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify Onboarding Wizard is displayed
+        composeTestRule.onNodeWithTag("onboarding_wizard_surface").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("onboarding_skip_button").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("onboarding_close_button").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onAllNodesWithTag("onboarding_wizard_surface").assertCountEquals(0)
     }
 }

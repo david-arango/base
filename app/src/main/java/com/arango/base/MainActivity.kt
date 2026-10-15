@@ -47,6 +47,8 @@ import com.arango.base.ui.components.ImportCsvSheet
 import com.arango.base.ui.components.IncomeEngineSheet
 import com.arango.base.ui.components.NewTransactionSheet
 import com.arango.base.ui.components.OffsetBudgetSheet
+import com.arango.base.ui.components.OnboardingWizard
+import com.arango.base.ui.components.WelcomeOverlayCard
 import com.arango.base.ui.screens.AnalyticsScreen
 import com.arango.base.ui.screens.LedgerScreen
 import com.arango.base.ui.screens.SettingsScreen
@@ -87,6 +89,8 @@ fun BaseApp(
     val isCategoryManagerOpen by viewModel.isCategoryManagerOpen.collectAsStateWithLifecycle()
     val isStartingBalanceOpen by viewModel.isStartingBalanceDialogOpen.collectAsStateWithLifecycle()
     val isImportCsvOpen by viewModel.isImportCsvSheetOpen.collectAsStateWithLifecycle()
+    val isOnboardingWizardOpen by viewModel.isOnboardingWizardOpen.collectAsStateWithLifecycle()
+    val hasCompletedOnboarding by viewModel.hasCompletedOnboarding.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
 
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -179,7 +183,8 @@ fun BaseApp(
                                 onOpenStartingBalanceDialog = { viewModel.openStartingBalanceDialog() },
                                 onExportCsv = { viewModel.exportCsv() },
                                 onImportCsv = { viewModel.openImportCsvSheet() },
-                                onResetData = { viewModel.resetAllData() }
+                                onResetData = { viewModel.resetAllData() },
+                                onRevisitOnboarding = { viewModel.openOnboardingWizard() }
                             )
                         }
                     }
@@ -297,6 +302,22 @@ fun BaseApp(
             onImportText = { csvText ->
                 viewModel.importCsv(csvText)
                 viewModel.closeImportCsvSheet()
+            }
+        )
+
+        // First-launch Welcome Overlay
+        WelcomeOverlayCard(
+            isVisible = !hasCompletedOnboarding && !isOnboardingWizardOpen && currentScreen == AppScreen.LEDGER,
+            onHelpMeSetUp = { viewModel.openOnboardingWizard() },
+            onExploreOnMyOwn = { viewModel.dismissOnboardingOverlay() }
+        )
+
+        // Full-screen Onboarding Setup Wizard
+        OnboardingWizard(
+            isOpen = isOnboardingWizardOpen,
+            onDismiss = { viewModel.closeOnboardingWizard() },
+            onComplete = { startingBalance, incomeConfig ->
+                viewModel.completeOnboarding(startingBalance, incomeConfig)
             }
         )
     }
