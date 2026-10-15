@@ -52,7 +52,7 @@ class FinanceViewModelTest {
             .build()
         repository = FinanceRepository(application, db.financeDao())
         viewModel = FinanceViewModel(application, repository, SharingStarted.Eagerly)
-        waitForCondition { repository.allTransactions.first().isNotEmpty() }
+        waitForCondition { repository.allCategories.first().isNotEmpty() }
     }
 
     @After
@@ -274,7 +274,6 @@ class FinanceViewModelTest {
 
     @Test
     fun addMultipleOffsetTransactions_logsAllOffsetsAndUpdatesBalance() = runTest(testDispatcher) {
-        waitForCondition { viewModel.uiState.value.transactions.isNotEmpty() }
         repository.clearAllOffsetTransactions()
         waitForCondition { viewModel.uiState.value.offsetTransactions.isEmpty() }
 
@@ -339,17 +338,21 @@ class FinanceViewModelTest {
     }
 
     @Test
-    fun restoreDemoData_repopulatesTransactionsAndShowsToast() = runTest(testDispatcher) {
-        repository.resetAllData()
-        waitForCondition { repository.allTransactions.first().isEmpty() }
+    fun importDemoCsv_populatesTransactionsAndShowsToast() = runTest(testDispatcher) {
+        val demoCsv = """
+            ID,Date,Title,Category,Type,Amount,Note,Status
+            1,"2026-10-14 21:30:00","Trader Joe's organic basket","Groceries","EXPENSE",64.20,"Groceries","Settled"
+            2,"2026-10-14 17:30:00","Morning pour-over coffee","Dining Out","EXPENSE",4.75,"Dining Out","Settled"
+            3,"2026-10-11 13:30:00","Bi-Weekly Paycheck","Recurring Income","INCOME",2100.00,"Paycheck","Deposited"
+        """.trimIndent()
 
-        viewModel.restoreDemoData()
+        viewModel.importCsv(demoCsv)
         waitForCondition { viewModel.toastMessage.value != null }
 
         assertNotNull(viewModel.toastMessage.value)
-        assertTrue(viewModel.toastMessage.value!!.contains("Demo sample data restored"))
+        assertTrue(viewModel.toastMessage.value!!.contains("Successfully imported 3 transactions"))
         val txs = repository.allTransactions.first()
-        assertTrue(txs.isNotEmpty())
+        assertEquals(3, txs.size)
     }
 
     @Test

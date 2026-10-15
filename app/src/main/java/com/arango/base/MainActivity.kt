@@ -179,8 +179,7 @@ fun BaseApp(
                                 onOpenStartingBalanceDialog = { viewModel.openStartingBalanceDialog() },
                                 onExportCsv = { viewModel.exportCsv() },
                                 onImportCsv = { viewModel.openImportCsvSheet() },
-                                onResetData = { viewModel.resetAllData() },
-                                onRestoreDemoData = { viewModel.restoreDemoData() }
+                                onResetData = { viewModel.resetAllData() }
                             )
                         }
                     }

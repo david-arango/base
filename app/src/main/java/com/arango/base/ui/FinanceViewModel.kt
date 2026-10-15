@@ -515,13 +515,6 @@ class FinanceViewModel @JvmOverloads constructor(
         }
     }
 
-    fun restoreDemoData() {
-        viewModelScope.launch {
-            repository.restoreDemoData()
-            showToast("Demo sample data restored")
-        }
-    }
-
     fun createCategory(name: String, iconKey: String, colorHex: Long) {
         viewModelScope.launch {
             repository.insertCategory(

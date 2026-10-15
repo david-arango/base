@@ -92,22 +92,23 @@ class FinanceRepositoryTest {
     }
 
     @Test
-    fun checkAndSeedInitialData_seedsTransactionsAndIncomeEngine() = runBlocking {
+    fun checkAndSeedInitialData_keepsLedgerEmptyOnFreshInstallAndSeedsCategories() = runBlocking {
         repository.checkAndSeedInitialData()
 
         val transactions = repository.allTransactions.first()
-        assertTrue("Transactions should not be empty after seeding", transactions.isNotEmpty())
+        assertTrue("Transactions should be empty on initial install", transactions.isEmpty())
+
+        val categories = repository.allCategories.first()
+        assertTrue("Default categories should be seeded", categories.isNotEmpty())
+        assertEquals(7, categories.size)
 
         val incomeEngine = repository.incomeEngineConfig.first()
-        assertNotNull(incomeEngine)
-        assertEquals(2100.0, incomeEngine!!.expectedIncome, 0.001)
-        assertEquals("Bi-Weekly", incomeEngine.cadence)
+        assertTrue(incomeEngine == null || !incomeEngine.isActive)
 
         // Running seed again should be idempotent
-        val countBefore = transactions.size
         repository.checkAndSeedInitialData()
         val countAfter = repository.allTransactions.first().size
-        assertEquals("Seeding again should not create duplicates", countBefore, countAfter)
+        assertEquals("Seeding again should keep transactions empty", 0, countAfter)
     }
 
     @Test
@@ -278,7 +279,15 @@ class FinanceRepositoryTest {
 
     @Test
     fun resetAllData_clearsTransactionsAndOffset() = runBlocking {
-        repository.checkAndSeedInitialData()
+        repository.insertTransaction(
+            TransactionEntity(
+                title = "Coffee",
+                category = "Dining Out",
+                amount = 4.50,
+                isExpense = true,
+                timestamp = System.currentTimeMillis()
+            )
+        )
         repository.setStartingBalanceOffset(999.0)
         assertEquals(999.0, repository.startingBalanceOffset.first(), 0.001)
 
@@ -292,13 +301,21 @@ class FinanceRepositoryTest {
     }
 
     @Test
-    fun restoreDemoData_reseedsTransactions() = runBlocking {
-        repository.resetAllData()
-        assertTrue(repository.allTransactions.first().isEmpty())
+    fun importCsv_demoData_importsSuccessfully() = runBlocking {
+        val demoCsv = """
+            ID,Date,Title,Category,Type,Amount,Note,Status
+            1,"2026-10-14 21:30:00","Trader Joe's organic basket","Groceries","EXPENSE",64.20,"Groceries","Settled"
+            2,"2026-10-14 17:30:00","Morning pour-over coffee","Dining Out","EXPENSE",4.75,"Dining Out","Settled"
+            3,"2026-10-11 13:30:00","Bi-Weekly Paycheck","Recurring Income","INCOME",2100.00,"Paycheck","Deposited"
+        """.trimIndent()
 
-        repository.restoreDemoData()
+        val count = repository.importCsvData(demoCsv)
+        assertEquals(3, count)
         val txs = repository.allTransactions.first()
-        assertTrue(txs.isNotEmpty())
+        assertEquals(3, txs.size)
+        assertTrue(txs.any { it.title == "Trader Joe's organic basket" && it.amount == 64.20 && it.isExpense })
+        assertTrue(txs.any { it.title == "Morning pour-over coffee" && it.amount == 4.75 && it.isExpense })
+        assertTrue(txs.any { it.title == "Bi-Weekly Paycheck" && it.amount == 2100.00 && !it.isExpense })
     }
 
     @Test
