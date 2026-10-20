@@ -619,4 +619,161 @@ class FinanceViewModelTest {
         waitForCondition { viewModel.toastMessage.value != null }
         assertTrue(viewModel.toastMessage.value!!.contains("Setup complete"))
     }
+
+    @Test
+    fun categorySpendingTarget_currentPaycheckAndLast30DaysScaling() = runTest(testDispatcher) {
+        repository.resetAllData()
+        waitForCondition { repository.allTransactions.first().isEmpty() }
+        val now = System.currentTimeMillis()
+
+        // Configure Groceries with $140 target, Dining Out with $70 target, Shopping with null target
+        val groceriesCat = viewModel.uiState.value.categories.first { it.name == "Groceries" }
+        val diningCat = viewModel.uiState.value.categories.first { it.name == "Dining Out" }
+        val healthCat = viewModel.uiState.value.categories.first { it.name == "Health" }
+
+        viewModel.updateCategorySpendingTarget(groceriesCat, 140.0)
+        waitForCondition { viewModel.uiState.value.categories.first { it.name == "Groceries" }.spendingTarget == 140.0 }
+        assertTrue(viewModel.toastMessage.value!!.contains("Groceries target set to $140.00"))
+
+        viewModel.updateCategorySpendingTarget(diningCat, 70.0)
+        waitForCondition { viewModel.uiState.value.categories.first { it.name == "Dining Out" }.spendingTarget == 70.0 }
+
+        // Also set a target on Health ($150), which will have $0 spent in the period
+        viewModel.updateCategorySpendingTarget(healthCat, 150.0)
+        waitForCondition { viewModel.uiState.value.categories.first { it.name == "Health" }.spendingTarget == 150.0 }
+
+        // Insert expenses for Groceries, Dining Out, and Shopping (no expense for Health)
+        repository.insertTransaction(
+            TransactionEntity(
+                title = "Market",
+                category = "Groceries",
+                amount = 110.0,
+                isExpense = true,
+                timestamp = now - 1000
+            )
+        )
+        repository.insertTransaction(
+            TransactionEntity(
+                title = "Bistro",
+                category = "Dining Out",
+                amount = 85.0,
+                isExpense = true,
+                timestamp = now - 2000
+            )
+        )
+        repository.insertTransaction(
+            TransactionEntity(
+                title = "Shoes",
+                category = "Shopping",
+                amount = 40.0,
+                isExpense = true,
+                timestamp = now - 3000
+            )
+        )
+        waitForCondition { viewModel.uiState.value.rankedBreakdown.size == 3 }
+
+        // 1. In CURRENT_PAYCHECK period, effectiveTarget equals per-paycheck spendingTarget (1.0x)
+        viewModel.setAnalyticsPeriod(AnalyticsPeriod.CURRENT_PAYCHECK)
+        val breakdownCurrent = viewModel.uiState.value.rankedBreakdown
+        // Health has $0 spent so it must NOT appear in rankedBreakdown
+        assertFalse(breakdownCurrent.any { it.category.name == "Health" })
+
+        val groceriesSpendCurrent = breakdownCurrent.first { it.category.name == "Groceries" }
+        val diningSpendCurrent = breakdownCurrent.first { it.category.name == "Dining Out" }
+        val shoppingSpendCurrent = breakdownCurrent.first { it.category.name == "Shopping" }
+
+        assertEquals(140.0, groceriesSpendCurrent.effectiveTarget!!, 0.01)
+        assertEquals(70.0, diningSpendCurrent.effectiveTarget!!, 0.01)
+        assertNull(shoppingSpendCurrent.effectiveTarget)
+
+        // 2. Switch to LAST_30_DAYS with Bi-Weekly cadence (default): scales by 30.0 / 14.0
+        repository.updateIncomeEngine(
+            IncomeEngineEntity(
+                id = 1,
+                expectedIncome = 2000.0,
+                cadence = "Bi-Weekly",
+                nextPaydayTimestamp = now + 86400000L * 7,
+                isActive = true
+            )
+        )
+        viewModel.setAnalyticsPeriod(AnalyticsPeriod.LAST_30_DAYS)
+        waitForCondition {
+            viewModel.uiState.value.currentPeriod == AnalyticsPeriod.LAST_30_DAYS &&
+                (viewModel.uiState.value.rankedBreakdown.first { it.category.name == "Groceries" }.effectiveTarget ?: 0.0) > 290.0
+        }
+        val breakdownBiWeekly30 = viewModel.uiState.value.rankedBreakdown
+        // 140 * (30 / 14) = 300.0; 70 * (30 / 14) = 150.0
+        assertEquals(300.0, breakdownBiWeekly30.first { it.category.name == "Groceries" }.effectiveTarget!!, 0.01)
+        assertEquals(150.0, breakdownBiWeekly30.first { it.category.name == "Dining Out" }.effectiveTarget!!, 0.01)
+        assertNull(breakdownBiWeekly30.first { it.category.name == "Shopping" }.effectiveTarget)
+
+        // 3. Weekly cadence in LAST_30_DAYS: scales by 30.0 / 7.0
+        repository.updateIncomeEngine(
+            IncomeEngineEntity(
+                id = 1,
+                expectedIncome = 1000.0,
+                cadence = "Weekly",
+                nextPaydayTimestamp = now + 86400000L * 4,
+                isActive = true
+            )
+        )
+        waitForCondition {
+            (viewModel.uiState.value.rankedBreakdown.first { it.category.name == "Groceries" }.effectiveTarget ?: 0.0) > 590.0
+        }
+        val breakdownWeekly30 = viewModel.uiState.value.rankedBreakdown
+        // 140 * (30 / 7) = 600.0; 70 * (30 / 7) = 300.0
+        assertEquals(600.0, breakdownWeekly30.first { it.category.name == "Groceries" }.effectiveTarget!!, 0.01)
+        assertEquals(300.0, breakdownWeekly30.first { it.category.name == "Dining Out" }.effectiveTarget!!, 0.01)
+
+        // 4. Monthly cadence in LAST_30_DAYS: scales by 1.0x (no change)
+        repository.updateIncomeEngine(
+            IncomeEngineEntity(
+                id = 1,
+                expectedIncome = 4000.0,
+                cadence = "Monthly",
+                nextPaydayTimestamp = now + 86400000L * 15,
+                isActive = true
+            )
+        )
+        waitForCondition {
+            (viewModel.uiState.value.rankedBreakdown.first { it.category.name == "Groceries" }.effectiveTarget ?: 0.0) < 200.0
+        }
+        val breakdownMonthly30 = viewModel.uiState.value.rankedBreakdown
+        assertEquals(140.0, breakdownMonthly30.first { it.category.name == "Groceries" }.effectiveTarget!!, 0.01)
+        assertEquals(70.0, breakdownMonthly30.first { it.category.name == "Dining Out" }.effectiveTarget!!, 0.01)
+
+        // 5. Clear target on Groceries
+        val latestGroceries = viewModel.uiState.value.categories.first { it.name == "Groceries" }
+        viewModel.updateCategorySpendingTarget(latestGroceries, null)
+        waitForCondition { viewModel.uiState.value.categories.first { it.name == "Groceries" }.spendingTarget == null }
+        assertTrue(viewModel.toastMessage.value!!.contains("Groceries spending target cleared"))
+        assertNull(viewModel.uiState.value.rankedBreakdown.first { it.category.name == "Groceries" }.effectiveTarget)
+    }
+
+    @Test
+    fun categoryOrdering_reorderCategories_updatesOrderAndPersists() = runTest(testDispatcher) {
+        waitForCondition { viewModel.uiState.value.categories.size >= 7 }
+        val initialCategories = viewModel.uiState.value.categories
+        val firstCat = initialCategories[0] // Groceries
+
+        // Reorder index 0 -> index 2
+        viewModel.reorderCategories(0, 2)
+        waitForCondition {
+            viewModel.uiState.value.categories[2].name == firstCat.name
+        }
+        assertEquals(firstCat.name, viewModel.uiState.value.categories[2].name)
+    }
+
+    @Test
+    fun categoryOrdering_saveCategoryOrder_updatesOrderAndPersists() = runTest(testDispatcher) {
+        waitForCondition { viewModel.uiState.value.categories.size >= 7 }
+        val current = viewModel.uiState.value.categories
+        val reversed = current.reversed()
+
+        viewModel.saveCategoryOrder(reversed)
+        waitForCondition {
+            viewModel.uiState.value.categories.first().name == reversed.first().name
+        }
+        assertEquals(reversed.map { it.name }, viewModel.uiState.value.categories.map { it.name })
+    }
 }

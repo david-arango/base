@@ -54,10 +54,10 @@ interface FinanceDao {
     suspend fun setPreference(pref: AppPreferenceEntity)
 
     // Categories
-    @Query("SELECT * FROM categories ORDER BY id ASC")
+    @Query("SELECT * FROM categories ORDER BY displayOrder ASC, id ASC")
     fun getAllCategories(): Flow<List<CategoryEntity>>
 
-    @Query("SELECT * FROM categories ORDER BY id ASC")
+    @Query("SELECT * FROM categories ORDER BY displayOrder ASC, id ASC")
     suspend fun getAllCategoriesList(): List<CategoryEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -68,6 +68,9 @@ interface FinanceDao {
 
     @Update
     suspend fun updateCategory(category: CategoryEntity)
+
+    @Update
+    suspend fun updateCategories(categories: List<CategoryEntity>)
 
     @Query("DELETE FROM categories WHERE id = :id")
     suspend fun deleteCategoryById(id: Long)

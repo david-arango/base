@@ -41,7 +41,8 @@ data class CategorySpend(
     val totalAmount: Double,
     val transactionCount: Int,
     val percentageOfSpend: Float,
-    val averageAmount: Double
+    val averageAmount: Double,
+    val effectiveTarget: Double? = null
 )
 
 data class FinanceUiState(
@@ -259,17 +260,31 @@ class FinanceViewModel @JvmOverloads constructor(
         val grouped = expensesList.groupBy { it.category }
         val totalSpendAmount = expensesList.sumOf { it.amount }.coerceAtLeast(0.01)
 
+        val targetScaleFactor = if (period == AnalyticsPeriod.CURRENT_PAYCHECK) {
+            1.0
+        } else {
+            when (incomeConfig.cadence.lowercase(Locale.US)) {
+                "weekly" -> 30.0 / 7.0
+                "monthly" -> 1.0
+                else -> 30.0 / 14.0
+            }
+        }
+
         val rankedBreakdown = grouped.map { (catName, items) ->
             val catTotal = items.sumOf { it.amount }
             val count = items.size
             val percent = (catTotal / totalSpendAmount).toFloat()
             val avg = if (count > 0) catTotal / count else 0.0
+            val resolvedCategory = DefaultCategories.getCategoryByName(catName, categoryItems)
+            val rawTarget = resolvedCategory.spendingTarget?.takeIf { it > 0.0 }
+            val effectiveTarget = rawTarget?.let { it * targetScaleFactor }
             CategorySpend(
-                category = DefaultCategories.getCategoryByName(catName, categoryItems),
+                category = resolvedCategory,
                 totalAmount = catTotal,
                 transactionCount = count,
                 percentageOfSpend = percent,
-                averageAmount = avg
+                averageAmount = avg,
+                effectiveTarget = effectiveTarget
             )
         }.sortedByDescending { it.totalAmount }
 
@@ -556,7 +571,8 @@ class FinanceViewModel @JvmOverloads constructor(
         }
     }
 
-    fun createCategory(name: String, iconKey: String, colorHex: Long) {
+    @Deprecated("Replaced by overload with spendingTarget", level = DeprecationLevel.HIDDEN)
+    private fun createCategoryLegacy(name: String, iconKey: String, colorHex: Long) {
         viewModelScope.launch {
             repository.insertCategory(
                 CategoryEntity(
@@ -569,7 +585,8 @@ class FinanceViewModel @JvmOverloads constructor(
         }
     }
 
-    fun updateCategory(id: Long, name: String, iconKey: String, colorHex: Long, oldName: String) {
+    @Deprecated("Replaced by overload with spendingTarget", level = DeprecationLevel.HIDDEN)
+    private fun updateCategoryLegacy(id: Long, name: String, iconKey: String, colorHex: Long, oldName: String) {
         viewModelScope.launch {
             repository.updateCategory(
                 CategoryEntity(
@@ -584,10 +601,75 @@ class FinanceViewModel @JvmOverloads constructor(
         }
     }
 
+    fun createCategory(name: String, iconKey: String, colorHex: Long, spendingTarget: Double? = null) {
+        viewModelScope.launch {
+            repository.insertCategory(
+                CategoryEntity(
+                    name = name.trim(),
+                    iconKey = iconKey,
+                    colorHex = colorHex,
+                    spendingTarget = spendingTarget?.takeIf { it > 0.0 }
+                )
+            )
+            showToast("Category \"${name.trim()}\" created")
+        }
+    }
+
+    fun updateCategory(id: Long, name: String, iconKey: String, colorHex: Long, oldName: String, spendingTarget: Double? = null) {
+        viewModelScope.launch {
+            repository.updateCategory(
+                CategoryEntity(
+                    id = id,
+                    name = name.trim(),
+                    iconKey = iconKey,
+                    colorHex = colorHex,
+                    spendingTarget = spendingTarget?.takeIf { it > 0.0 }
+                ),
+                oldName = oldName
+            )
+            showToast("Category updated")
+        }
+    }
+
+    fun updateCategorySpendingTarget(category: CategoryItem, spendingTarget: Double?) {
+        viewModelScope.launch {
+            val entity = DefaultCategories.toEntity(category)
+            val normalized = spendingTarget?.takeIf { it > 0.0 }
+            repository.updateCategorySpendingTarget(
+                dbId = category.dbId,
+                name = category.name,
+                iconKey = category.iconKey,
+                colorHex = entity.colorHex,
+                spendingTarget = normalized
+            )
+            if (normalized != null) {
+                showToast("${category.name} target set to $${String.format(Locale.US, "%,.2f", normalized)}")
+            } else {
+                showToast("${category.name} spending target cleared")
+            }
+        }
+    }
+
     fun deleteCategory(id: Long, name: String) {
         viewModelScope.launch {
             repository.deleteCategory(id, name)
             showToast("Category \"$name\" deleted")
+        }
+    }
+
+    fun reorderCategories(fromIndex: Int, toIndex: Int) {
+        val current = uiState.value.categories.toMutableList()
+        if (fromIndex !in current.indices || toIndex !in current.indices || fromIndex == toIndex) return
+        val item = current.removeAt(fromIndex)
+        current.add(toIndex, item)
+        viewModelScope.launch {
+            repository.updateCategoryOrders(current)
+        }
+    }
+
+    fun saveCategoryOrder(orderedList: List<CategoryItem>) {
+        viewModelScope.launch {
+            repository.updateCategoryOrders(orderedList)
         }
     }
 

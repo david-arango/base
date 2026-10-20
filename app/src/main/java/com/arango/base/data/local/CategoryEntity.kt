@@ -9,5 +9,7 @@ data class CategoryEntity(
     val id: Long = 0,
     val name: String,
     val iconKey: String = "category",
-    val colorHex: Long = 0xFF5B604BL
+    val colorHex: Long = 0xFF5B604BL,
+    val spendingTarget: Double? = null,
+    val displayOrder: Int = 0
 )

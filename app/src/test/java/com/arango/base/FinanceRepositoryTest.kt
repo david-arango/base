@@ -8,6 +8,8 @@ import com.arango.base.data.local.CategoryEntity
 import com.arango.base.data.local.FinanceDao
 import com.arango.base.data.local.IncomeEngineEntity
 import com.arango.base.data.local.TransactionEntity
+import com.arango.base.data.model.CategoryItem
+import com.arango.base.data.model.DefaultCategories
 import com.arango.base.data.repository.FinanceRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -15,6 +17,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -461,6 +464,95 @@ class FinanceRepositoryTest {
 
         val config = repository.incomeEngineConfig.first()
         assertTrue(config!!.nextPaydayTimestamp > originalPayday)
+    }
+
+    @Test
+    fun category_spendingTargetCrudAndUpdateCategoryTarget() = runBlocking {
+        repository.seedDefaultCategoriesIfEmpty()
+        val categories = repository.allCategories.first()
+        val groceries = categories.first { it.name == "Groceries" }
+        assertNull(groceries.spendingTarget)
+
+        // Update target for existing seeded category
+        repository.updateCategorySpendingTarget(
+            dbId = groceries.id,
+            name = groceries.name,
+            iconKey = groceries.iconKey,
+            colorHex = groceries.colorHex,
+            spendingTarget = 220.0
+        )
+        val afterSet = repository.allCategories.first().first { it.name == "Groceries" }
+        assertEquals(220.0, afterSet.spendingTarget!!, 0.001)
+
+        // Clear target
+        repository.updateCategorySpendingTarget(
+            dbId = groceries.id,
+            name = groceries.name,
+            iconKey = groceries.iconKey,
+            colorHex = groceries.colorHex,
+            spendingTarget = null
+        )
+        val afterClear = repository.allCategories.first().first { it.name == "Groceries" }
+        assertNull(afterClear.spendingTarget)
+
+        // Update target on an unseeded category ("Other") inserts it with target
+        repository.updateCategorySpendingTarget(
+            dbId = 0L,
+            name = "Other",
+            iconKey = "payments",
+            colorHex = 0xFF546E7AL,
+            spendingTarget = 95.0
+        )
+        val otherCat = repository.allCategories.first().firstOrNull { it.name == "Other" }
+        assertNotNull(otherCat)
+        assertEquals(95.0, otherCat!!.spendingTarget!!, 0.001)
+    }
+
+    @Test
+    fun category_insertAppendsToEndWithMaxDisplayOrderPlusOne() = runBlocking {
+        repository.seedDefaultCategoriesIfEmpty()
+        val initialCats = repository.allCategories.first()
+        assertEquals(7, initialCats.size)
+        assertEquals(6, initialCats.maxOf { it.displayOrder })
+
+        // Insert new category
+        val newCatId1 = repository.insertCategory(
+            CategoryEntity(
+                name = "Investments",
+                iconKey = "trending_up",
+                colorHex = 0xFF1B5E20L
+            )
+        )
+        val afterFirst = repository.allCategories.first()
+        val inserted1 = afterFirst.first { it.id == newCatId1 }
+        assertEquals(7, inserted1.displayOrder)
+
+        // Insert second category
+        val newCatId2 = repository.insertCategory(
+            CategoryEntity(
+                name = "Gifts",
+                iconKey = "card_giftcard",
+                colorHex = 0xFFD81B60L
+            )
+        )
+        val afterSecond = repository.allCategories.first()
+        val inserted2 = afterSecond.first { it.id == newCatId2 }
+        assertEquals(8, inserted2.displayOrder)
+    }
+
+    @Test
+    fun category_updateCategoryOrdersPersistsCustomOrder() = runBlocking {
+        repository.seedDefaultCategoriesIfEmpty()
+        val originalList = repository.allCategories.first().map { DefaultCategories.fromEntity(it) }
+        val reversed = originalList.reversed()
+
+        repository.updateCategoryOrders(reversed)
+
+        val updatedList = repository.allCategories.first().map { DefaultCategories.fromEntity(it) }
+        assertEquals(reversed.map { it.name }, updatedList.map { it.name })
+        updatedList.forEachIndexed { index, item ->
+            assertEquals(index, item.displayOrder)
+        }
     }
 
     @Test

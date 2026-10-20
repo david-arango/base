@@ -1,13 +1,12 @@
 package com.arango.base.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,19 +17,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,39 +40,36 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import com.arango.base.data.model.CategoryItem
 import com.arango.base.ui.AnalyticsPeriod
 import com.arango.base.ui.CategorySpend
 import com.arango.base.ui.FinanceUiState
+import com.arango.base.ui.components.CategorySpendingTargetDialog
 import com.arango.base.ui.theme.AnalyticsColorPalette
 import com.arango.base.ui.theme.CalmNegativeDeep
-import com.arango.base.ui.theme.CalmOnPrimary
-import com.arango.base.ui.theme.CalmOnSecondaryContainer
-import com.arango.base.ui.theme.CalmOutlineVariant
 import com.arango.base.ui.theme.CalmPositiveDeep
-import com.arango.base.ui.theme.CalmPrimary
-import com.arango.base.ui.theme.CalmSecondary
-import com.arango.base.ui.theme.CalmSecondaryContainer
-import com.arango.base.ui.theme.CalmSurfaceContainer
-import com.arango.base.ui.theme.CalmSurfaceContainerHigh
-import com.arango.base.ui.theme.CalmSurfaceContainerLow
-import com.arango.base.ui.theme.CalmSurfaceContainerLowest
-import com.arango.base.ui.theme.CalmTextMuted
+import com.arango.base.ui.theme.CalmSageSubtle
+import com.arango.base.ui.theme.CalmTerracottaSubtle
 import java.util.Locale
 
 @Composable
 fun AnalyticsScreen(
     uiState: FinanceUiState,
     onPeriodChange: (AnalyticsPeriod) -> Unit,
+    onUpdateCategoryTarget: (CategoryItem, Double?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    var editingTargetCategory by remember { mutableStateOf<CategoryItem?>(null) }
+
     val distinctBreakdown = remember(uiState.rankedBreakdown) {
         AnalyticsColorPalette.resolveDistinctCategoryColors(uiState.rankedBreakdown)
     }
 
+    Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("analytics_lazy_column"),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -227,7 +217,13 @@ fun AnalyticsScreen(
                         distinctBreakdown.forEachIndexed { index, item ->
                             RankedCategoryItemCard(
                                 rank = index + 1,
-                                item = item
+                                item = item,
+                                onClick = {
+                                    val matchingCat = uiState.categories.firstOrNull {
+                                        it.name.equals(item.category.name, ignoreCase = true)
+                                    } ?: item.category
+                                    editingTargetCategory = matchingCat
+                                }
                             )
                         }
                     }
@@ -258,6 +254,19 @@ fun AnalyticsScreen(
                 )
             }
         }
+    }
+
+    if (editingTargetCategory != null) {
+        val cat = editingTargetCategory!!
+        CategorySpendingTargetDialog(
+            category = cat,
+            onDismiss = { editingTargetCategory = null },
+            onSaveTarget = { newTarget ->
+                onUpdateCategoryTarget(cat, newTarget)
+                editingTargetCategory = null
+            }
+        )
+    }
     }
 }
 
@@ -529,13 +538,26 @@ fun ExpenseFlowCard(breakdown: List<CategorySpend>) {
 @Composable
 fun RankedCategoryItemCard(
     rank: Int,
-    item: CategorySpend
+    item: CategorySpend,
+    onClick: () -> Unit = {}
 ) {
+    val effectiveTarget = item.effectiveTarget
+    val hasTarget = effectiveTarget != null && effectiveTarget > 0.0
+    val barFraction = if (hasTarget) {
+        (item.totalAmount / effectiveTarget!!).toFloat().coerceIn(0.01f, 1f)
+    } else {
+        item.percentageOfSpend.coerceIn(0.01f, 1f)
+    }
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(14.dp),
         shadowElevation = 0.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .testTag("ranked_category_card_${item.category.id}")
     ) {
         Column(
             modifier = Modifier
@@ -596,7 +618,7 @@ fun RankedCategoryItemCard(
                 }
             }
 
-            // Proportional mini gauge
+            // Proportional mini gauge (target progress when target is set, otherwise % of total spend)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -606,11 +628,55 @@ fun RankedCategoryItemCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(item.percentageOfSpend.coerceIn(0.01f, 1f))
+                        .fillMaxWidth(barFraction)
                         .height(6.dp)
                         .clip(RoundedCornerShape(9999.dp))
                         .background(item.category.color)
                 )
+            }
+
+            // Spending Target Row + Under/Over Pill Badge
+            if (hasTarget) {
+                val targetVal = effectiveTarget!!
+                val diff = targetVal - item.totalAmount
+                val isUnder = diff > 0.005
+                val isOver = diff < -0.005
+                val badgeBg = if (isOver) CalmTerracottaSubtle else CalmSageSubtle
+                val badgeTextColor = if (isOver) CalmNegativeDeep else CalmPositiveDeep
+                val badgeText = when {
+                    isUnder -> String.format(Locale.US, "$%,.2f under target", diff)
+                    isOver -> String.format(Locale.US, "$%,.2f over target", -diff)
+                    else -> "On target"
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("target_status_row_${item.category.id}"),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = String.format(Locale.US, "Target: $%,.2f", targetVal),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("target_amount_text_${item.category.id}")
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(9999.dp))
+                            .background(badgeBg)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .testTag("target_badge_${item.category.id}")
+                    ) {
+                        Text(
+                            text = badgeText,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = badgeTextColor
+                        )
+                    }
+                }
             }
         }
     }

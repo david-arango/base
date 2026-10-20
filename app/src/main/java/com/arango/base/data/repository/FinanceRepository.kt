@@ -8,7 +8,9 @@ import com.arango.base.data.local.FinanceDao
 import com.arango.base.data.local.IncomeEngineEntity
 import com.arango.base.data.local.OffsetTransactionEntity
 import com.arango.base.data.local.TransactionEntity
+import com.arango.base.data.model.CategoryItem
 import com.arango.base.data.model.CategoryVisuals
+import com.arango.base.data.model.DefaultCategories
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -250,7 +252,14 @@ class FinanceRepository(
 
     suspend fun insertCategory(category: CategoryEntity): Long {
         return withContext(ioDispatcher) {
-            dao.insertCategory(category)
+            val existing = dao.getAllCategoriesList()
+            val nextOrder = if (existing.isEmpty()) 0 else (existing.maxOfOrNull { it.displayOrder } ?: 0) + 1
+            val toInsert = if (category.displayOrder == 0 && existing.isNotEmpty()) {
+                category.copy(displayOrder = nextOrder)
+            } else {
+                category
+            }
+            dao.insertCategory(toInsert)
         }
     }
 
@@ -259,6 +268,43 @@ class FinanceRepository(
             dao.updateCategory(category)
             if (oldName.isNotBlank() && oldName != category.name) {
                 dao.updateCategoryInTransactions(oldName, category.name)
+            }
+        }
+    }
+
+    suspend fun updateCategoryOrders(orderedItems: List<CategoryItem>) {
+        withContext(ioDispatcher) {
+            val existingList = dao.getAllCategoriesList().associateBy { it.id }
+            val updatedEntities = orderedItems.mapIndexed { index, item ->
+                existingList[item.dbId]?.copy(displayOrder = index)
+                    ?: DefaultCategories.toEntity(item).copy(displayOrder = index)
+            }
+            dao.updateCategories(updatedEntities)
+        }
+    }
+
+    suspend fun updateCategorySpendingTarget(
+        dbId: Long,
+        name: String,
+        iconKey: String,
+        colorHex: Long,
+        spendingTarget: Double?
+    ) {
+        withContext(ioDispatcher) {
+            val normalizedTarget = spendingTarget?.takeIf { it > 0.0 }
+            val allCats = dao.getAllCategoriesList()
+            val existing = allCats.firstOrNull { (dbId > 0L && it.id == dbId) || it.name.equals(name, ignoreCase = true) }
+            if (existing != null) {
+                dao.updateCategory(existing.copy(spendingTarget = normalizedTarget))
+            } else {
+                dao.insertCategory(
+                    CategoryEntity(
+                        name = name.trim(),
+                        iconKey = iconKey,
+                        colorHex = colorHex,
+                        spendingTarget = normalizedTarget
+                    )
+                )
             }
         }
     }
@@ -275,13 +321,13 @@ class FinanceRepository(
             val existing = dao.getAllCategoriesList()
             if (existing.isEmpty()) {
                 val defaults = listOf(
-                    CategoryEntity(name = "Groceries", iconKey = "local_grocery_store", colorHex = 0xFF2E7D32L),
-                    CategoryEntity(name = "Dining Out", iconKey = "restaurant", colorHex = 0xFFD35400L),
-                    CategoryEntity(name = "Bills & Utilities", iconKey = "receipt", colorHex = 0xFF2980B9L),
-                    CategoryEntity(name = "Transport", iconKey = "directions_subway", colorHex = 0xFFD48806L),
-                    CategoryEntity(name = "Shopping", iconKey = "shopping_bag", colorHex = 0xFF8E44ADL),
-                    CategoryEntity(name = "Health", iconKey = "spa", colorHex = 0xFF16A085L),
-                    CategoryEntity(name = "Entertainment", iconKey = "movie", colorHex = 0xFFC0392BL)
+                    CategoryEntity(name = "Groceries", iconKey = "local_grocery_store", colorHex = 0xFF2E7D32L, displayOrder = 0),
+                    CategoryEntity(name = "Dining Out", iconKey = "restaurant", colorHex = 0xFFD35400L, displayOrder = 1),
+                    CategoryEntity(name = "Bills & Utilities", iconKey = "receipt", colorHex = 0xFF2980B9L, displayOrder = 2),
+                    CategoryEntity(name = "Transport", iconKey = "directions_subway", colorHex = 0xFFD48806L, displayOrder = 3),
+                    CategoryEntity(name = "Shopping", iconKey = "shopping_bag", colorHex = 0xFF8E44ADL, displayOrder = 4),
+                    CategoryEntity(name = "Health", iconKey = "spa", colorHex = 0xFF16A085L, displayOrder = 5),
+                    CategoryEntity(name = "Entertainment", iconKey = "movie", colorHex = 0xFFC0392BL, displayOrder = 6)
                 )
                 dao.insertCategories(defaults)
             } else if (existing.all { it.colorHex == 0xFF5B604BL }) {

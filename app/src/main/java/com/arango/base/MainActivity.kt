@@ -171,7 +171,10 @@ fun BaseApp(
                         AppScreen.ANALYTICS -> {
                             AnalyticsScreen(
                                 uiState = uiState,
-                                onPeriodChange = { viewModel.setAnalyticsPeriod(it) }
+                                onPeriodChange = { viewModel.setAnalyticsPeriod(it) },
+                                onUpdateCategoryTarget = { category, target ->
+                                    viewModel.updateCategorySpendingTarget(category, target)
+                                }
                             )
                         }
 
@@ -269,6 +272,15 @@ fun BaseApp(
             },
             onDeleteCategory = { id, name ->
                 viewModel.deleteCategory(id, name)
+            },
+            onCreateCategoryWithTarget = { name, iconKey, colorHex, spendingTarget ->
+                viewModel.createCategory(name, iconKey, colorHex, spendingTarget)
+            },
+            onUpdateCategoryWithTarget = { id, name, iconKey, colorHex, oldName, spendingTarget ->
+                viewModel.updateCategory(id, name, iconKey, colorHex, oldName, spendingTarget)
+            },
+            onSaveCategoryOrder = { orderedList ->
+                viewModel.saveCategoryOrder(orderedList)
             }
         )
 

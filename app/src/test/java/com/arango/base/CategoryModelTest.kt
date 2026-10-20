@@ -7,6 +7,7 @@ import com.arango.base.data.model.CategoryVisuals
 import com.arango.base.data.model.DefaultCategories
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -117,5 +118,63 @@ class CategoryModelTest {
         assertEquals("Travel & Leisure", convertedEntity.name)
         assertEquals("flight", convertedEntity.iconKey)
         assertEquals(0xFF5588AAL, convertedEntity.colorHex)
+        assertNull(convertedEntity.spendingTarget)
+    }
+
+    @Test
+    fun defaultCategories_haveNullSpendingTargetByDefault() {
+        DefaultCategories.list.forEach { cat ->
+            assertNull("Default category ${cat.name} should have null target", cat.spendingTarget)
+        }
+    }
+
+    @Test
+    fun defaultCategories_entityMappingWithSpendingTarget() {
+        val entity = CategoryEntity(
+            id = 77L,
+            name = "Groceries",
+            iconKey = "local_grocery_store",
+            colorHex = 0xFF2E7D32L,
+            spendingTarget = 250.0
+        )
+
+        val item = DefaultCategories.fromEntity(entity)
+        assertEquals(77L, item.dbId)
+        assertEquals(250.0, item.spendingTarget!!, 0.001)
+
+        val backToEntity = DefaultCategories.toEntity(item)
+        assertEquals(250.0, backToEntity.spendingTarget!!, 0.001)
+
+        // Zero or negative target normalizes to null
+        val zeroTargetEntity = entity.copy(spendingTarget = 0.0)
+        assertNull(DefaultCategories.fromEntity(zeroTargetEntity).spendingTarget)
+    }
+
+    @Test
+    fun defaultCategories_displayOrderMapping() {
+        DefaultCategories.list.forEachIndexed { index, cat ->
+            assertEquals("Default category ${cat.name} should have displayOrder = $index", index, cat.displayOrder)
+        }
+
+        val entity = CategoryEntity(
+            id = 55L,
+            name = "Gaming",
+            iconKey = "sports_esports",
+            colorHex = 0xFF8E44ADL,
+            displayOrder = 9
+        )
+        val item = DefaultCategories.fromEntity(entity)
+        assertEquals(9, item.displayOrder)
+
+        val backToEntity = DefaultCategories.toEntity(item)
+        assertEquals(9, backToEntity.displayOrder)
+    }
+
+    @Test
+    fun getCategoryByName_preservesCustomCategorySpendingTarget() {
+        val customGroceries = DefaultCategories.list.first { it.name == "Groceries" }
+            .copy(dbId = 10L, spendingTarget = 175.0)
+        val resolved = DefaultCategories.getCategoryByName("Groceries", listOf(customGroceries))
+        assertEquals(175.0, resolved.spendingTarget!!, 0.001)
     }
 }

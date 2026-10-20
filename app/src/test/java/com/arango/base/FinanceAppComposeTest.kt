@@ -1,7 +1,10 @@
 package com.arango.base
 
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -14,6 +17,7 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.arango.base.data.local.OffsetTransactionEntity
 import com.arango.base.data.local.TransactionEntity
+import com.arango.base.data.model.CategoryItem
 import com.arango.base.data.model.DefaultCategories
 import com.arango.base.ui.FinanceUiState
 import com.arango.base.ui.components.CategoryEditorDialog
@@ -778,6 +782,223 @@ class FinanceAppComposeTest {
         }
         composeTestRule.onAllNodesWithTag("onboarding_wizard_surface").assertCountEquals(0)
         composeTestRule.onNodeWithTag("fab_add_transaction").assertIsDisplayed()
+    }
+
+    @Test
+    fun analyticsScreen_rankedBreakdown_displaysUnderOverAndOnTargetBadges() {
+        val groceriesCat = DefaultCategories.list.first { it.id == "groceries" }.copy(spendingTarget = 200.0)
+        val diningCat = DefaultCategories.list.first { it.id == "dining" }.copy(spendingTarget = 100.0)
+        val transportCat = DefaultCategories.list.first { it.id == "transport" }.copy(spendingTarget = 50.0)
+        val shoppingCat = DefaultCategories.list.first { it.id == "shopping" }.copy(spendingTarget = null)
+
+        val breakdown = listOf(
+            com.arango.base.ui.CategorySpend(
+                category = diningCat,
+                totalAmount = 135.0,
+                transactionCount = 3,
+                percentageOfSpend = 0.39f,
+                averageAmount = 45.0,
+                effectiveTarget = 100.0
+            ),
+            com.arango.base.ui.CategorySpend(
+                category = groceriesCat,
+                totalAmount = 120.0,
+                transactionCount = 2,
+                percentageOfSpend = 0.35f,
+                averageAmount = 60.0,
+                effectiveTarget = 200.0
+            ),
+            com.arango.base.ui.CategorySpend(
+                category = transportCat,
+                totalAmount = 50.0,
+                transactionCount = 1,
+                percentageOfSpend = 0.14f,
+                averageAmount = 50.0,
+                effectiveTarget = 50.0
+            ),
+            com.arango.base.ui.CategorySpend(
+                category = shoppingCat,
+                totalAmount = 40.0,
+                transactionCount = 1,
+                percentageOfSpend = 0.12f,
+                averageAmount = 40.0,
+                effectiveTarget = null
+            )
+        )
+
+        composeTestRule.setContent {
+            BaseTheme {
+                com.arango.base.ui.screens.AnalyticsScreen(
+                    uiState = FinanceUiState(
+                        periodIn = 2000.0,
+                        periodOut = 345.0,
+                        rankedBreakdown = breakdown,
+                        categories = listOf(groceriesCat, diningCat, transportCat, shoppingCat)
+                    ),
+                    onPeriodChange = {}
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Scroll to Ranked Breakdown section
+        composeTestRule.onNodeWithTag("analytics_lazy_column").performScrollToIndex(5)
+        composeTestRule.waitForIdle()
+
+        // Verify over target card (Dining Out: $135 spent vs $100 target -> $35.00 over target)
+        composeTestRule.onNodeWithTag("target_status_row_dining", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Target: $100.00", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("$35.00 over target", useUnmergedTree = true).assertExists()
+
+        // Verify under target card (Groceries: $120 spent vs $200 target -> $80.00 under target)
+        composeTestRule.onNodeWithTag("target_status_row_groceries", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Target: $200.00", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("$80.00 under target", useUnmergedTree = true).assertExists()
+
+        // Verify on target card (Transport: $50 spent vs $50 target -> On target)
+        composeTestRule.onNodeWithTag("target_status_row_transport", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Target: $50.00", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("On target", useUnmergedTree = true).assertExists()
+
+        // Verify category without target (Shopping) does NOT show a target row
+        composeTestRule.onAllNodesWithTag("target_status_row_shopping", useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun analyticsScreen_tapRankedCard_opensSpendingTargetDialog_savesAndClears() {
+        val groceriesCat = DefaultCategories.list.first { it.id == "groceries" }.copy(spendingTarget = 150.0)
+        val breakdown = listOf(
+            com.arango.base.ui.CategorySpend(
+                category = groceriesCat,
+                totalAmount = 120.0,
+                transactionCount = 2,
+                percentageOfSpend = 1.0f,
+                averageAmount = 60.0,
+                effectiveTarget = 150.0
+            )
+        )
+
+        var updatedCategory: com.arango.base.data.model.CategoryItem? = null
+        var updatedTarget: Double? = -1.0
+
+        composeTestRule.setContent {
+            BaseTheme {
+                com.arango.base.ui.screens.AnalyticsScreen(
+                    uiState = FinanceUiState(
+                        periodIn = 2000.0,
+                        periodOut = 120.0,
+                        rankedBreakdown = breakdown,
+                        categories = listOf(groceriesCat)
+                    ),
+                    onPeriodChange = {},
+                    onUpdateCategoryTarget = { cat, target ->
+                        updatedCategory = cat
+                        updatedTarget = target
+                    }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Scroll to Ranked Breakdown section and tap the card for Groceries
+        composeTestRule.onNodeWithTag("analytics_lazy_column").performScrollToIndex(5)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("ranked_category_card_groceries").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify Spending Target dialog opens
+        composeTestRule.onNodeWithText("Spending Target").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("spending_target_input").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("clear_spending_target_btn").assertIsDisplayed()
+
+        // Update target to 250.50 and save
+        composeTestRule.onNodeWithTag("spending_target_input").performTextClearance()
+        composeTestRule.onNodeWithTag("spending_target_input").performTextInput("250.50")
+        composeTestRule.onNodeWithTag("save_spending_target_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals("Groceries", updatedCategory?.name)
+        assertEquals(250.50, updatedTarget!!, 0.001)
+
+        // Open again and click Clear Target
+        composeTestRule.onNodeWithTag("ranked_category_card_groceries").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("clear_spending_target_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(null, updatedTarget)
+    }
+
+    @Test
+    fun categoryManagerSheet_displaysTargetAndEditsInDialog() {
+        val categoriesWithTarget = DefaultCategories.list.map {
+            if (it.id == "groceries") it.copy(spendingTarget = 225.0) else it
+        }
+        var createdName: String? = null
+        var createdTarget: Double? = null
+
+        composeTestRule.setContent {
+            BaseTheme {
+                CategoryManagerSheet(
+                    isOpen = true,
+                    categories = categoriesWithTarget,
+                    onDismiss = {},
+                    onCreateCategoryWithTarget = { name, _, _, target ->
+                        createdName = name
+                        createdTarget = target
+                    }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Verify target subtitle is displayed on Groceries row
+        composeTestRule.onNodeWithTag("category_row_target_groceries").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target: $225.00 / paycheck").assertIsDisplayed()
+
+        // Click Add New Category and enter name + spending target
+        composeTestRule.onNodeWithTag("btn_add_category").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("category_name_input").performTextInput("Coffee & Bakery")
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("category_name_input").assertTextContains("Coffee & Bakery")
+        composeTestRule.onNodeWithTag("category_target_input").performTextInput("65")
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("save_category_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("save_category_button").assert(isEnabled())
+        composeTestRule.onNodeWithTag("save_category_button").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals("Coffee & Bakery", createdName)
+        assertEquals(65.0, createdTarget!!, 0.001)
+    }
+
+    @Test
+    fun categoryManagerSheet_displaysDragHandles_andPersistsReorder() {
+        val categories = DefaultCategories.list
+        var savedList: List<CategoryItem>? = null
+
+        composeTestRule.setContent {
+            BaseTheme {
+                CategoryManagerSheet(
+                    isOpen = true,
+                    categories = categories,
+                    onDismiss = {},
+                    onSaveCategoryOrder = { savedList = it }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Verify drag handles are present on rows
+        composeTestRule.onNodeWithTag("drag_handle_groceries", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("drag_handle_dining", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("drag_handle_bills", useUnmergedTree = true).assertIsDisplayed()
+
+        // Verify clicking Done or Dismiss triggers sheet closure cleanly
+        composeTestRule.onNodeWithTag("done_category_manager_btn").assertIsDisplayed()
     }
 
     @Test

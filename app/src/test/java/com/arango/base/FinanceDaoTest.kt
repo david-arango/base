@@ -237,4 +237,58 @@ class FinanceDaoTest {
         val reassignedTx = dao.getAllTransactionsList().first { it.id == txId }
         assertEquals("Other", reassignedTx.category)
     }
+
+    @Test
+    fun category_insertAndUpdateSpendingTarget() = runBlocking {
+        val catId = dao.insertCategory(
+            CategoryEntity(
+                name = "Dining Out",
+                iconKey = "restaurant",
+                colorHex = 0xFFD35400L,
+                spendingTarget = null
+            )
+        )
+        val initial = dao.getAllCategoriesList().first { it.id == catId }
+        assertNull(initial.spendingTarget)
+
+        // Set spending target to 180.0
+        dao.updateCategory(initial.copy(spendingTarget = 180.0))
+        val updated = dao.getAllCategoriesList().first { it.id == catId }
+        assertNotNull(updated.spendingTarget)
+        assertEquals(180.0, updated.spendingTarget!!, 0.001)
+
+        // Clear spending target back to null
+        dao.updateCategory(updated.copy(spendingTarget = null))
+        val cleared = dao.getAllCategoriesList().first { it.id == catId }
+        assertNull(cleared.spendingTarget)
+    }
+
+    @Test
+    fun category_orderedByDisplayOrderAscAndBatchUpdate() = runBlocking {
+        val catA = CategoryEntity(name = "Cat A", iconKey = "a", colorHex = 0xFF111111L, displayOrder = 2)
+        val catB = CategoryEntity(name = "Cat B", iconKey = "b", colorHex = 0xFF222222L, displayOrder = 0)
+        val catC = CategoryEntity(name = "Cat C", iconKey = "c", colorHex = 0xFF333333L, displayOrder = 1)
+
+        val idA = dao.insertCategory(catA)
+        val idB = dao.insertCategory(catB)
+        val idC = dao.insertCategory(catC)
+
+        // Query should order by displayOrder ASC (Cat B [0], Cat C [1], Cat A [2])
+        val initialList = dao.getAllCategoriesList()
+        assertEquals(listOf(idB, idC, idA), initialList.map { it.id })
+        assertEquals(listOf("Cat B", "Cat C", "Cat A"), initialList.map { it.name })
+
+        // Reorder batch: Cat A -> 0, Cat B -> 1, Cat C -> 2
+        dao.updateCategories(
+            listOf(
+                initialList.first { it.id == idA }.copy(displayOrder = 0),
+                initialList.first { it.id == idB }.copy(displayOrder = 1),
+                initialList.first { it.id == idC }.copy(displayOrder = 2)
+            )
+        )
+
+        val reorderedList = dao.getAllCategoriesList()
+        assertEquals(listOf(idA, idB, idC), reorderedList.map { it.id })
+        assertEquals(listOf("Cat A", "Cat B", "Cat C"), reorderedList.map { it.name })
+    }
 }

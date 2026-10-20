@@ -21,7 +21,9 @@ data class CategoryItem(
     val icon: ImageVector,
     val color: Color,
     val dbId: Long = 0L,
-    val iconKey: String = "category"
+    val iconKey: String = "category",
+    val spendingTarget: Double? = null,
+    val displayOrder: Int = 0
 )
 
 object CategoryVisuals {
@@ -285,13 +287,13 @@ object CategoryVisuals {
 
 object DefaultCategories {
     val list = listOf(
-        CategoryItem("groceries", "Groceries", Icons.Filled.LocalGroceryStore, Color(0xFF2E7D32), 1L, "local_grocery_store"),
-        CategoryItem("dining", "Dining Out", Icons.Filled.Restaurant, Color(0xFFD35400), 2L, "restaurant"),
-        CategoryItem("bills", "Bills & Utilities", Icons.Filled.Receipt, Color(0xFF2980B9), 3L, "receipt"),
-        CategoryItem("transport", "Transport", Icons.Filled.DirectionsSubway, Color(0xFFD48806), 4L, "directions_subway"),
-        CategoryItem("shopping", "Shopping", Icons.Filled.ShoppingBag, Color(0xFF8E44AD), 5L, "shopping_bag"),
-        CategoryItem("health", "Health", Icons.Filled.Spa, Color(0xFF16A085), 6L, "spa"),
-        CategoryItem("entertainment", "Entertainment", Icons.Filled.ConfirmationNumber, Color(0xFFC0392B), 7L, "movie")
+        CategoryItem("groceries", "Groceries", Icons.Filled.LocalGroceryStore, Color(0xFF2E7D32), 1L, "local_grocery_store", displayOrder = 0),
+        CategoryItem("dining", "Dining Out", Icons.Filled.Restaurant, Color(0xFFD35400), 2L, "restaurant", displayOrder = 1),
+        CategoryItem("bills", "Bills & Utilities", Icons.Filled.Receipt, Color(0xFF2980B9), 3L, "receipt", displayOrder = 2),
+        CategoryItem("transport", "Transport", Icons.Filled.DirectionsSubway, Color(0xFFD48806), 4L, "directions_subway", displayOrder = 3),
+        CategoryItem("shopping", "Shopping", Icons.Filled.ShoppingBag, Color(0xFF8E44AD), 5L, "shopping_bag", displayOrder = 4),
+        CategoryItem("health", "Health", Icons.Filled.Spa, Color(0xFF16A085), 6L, "spa", displayOrder = 5),
+        CategoryItem("entertainment", "Entertainment", Icons.Filled.ConfirmationNumber, Color(0xFFC0392B), 7L, "movie", displayOrder = 6)
     )
 
     fun fromEntity(entity: CategoryEntity): CategoryItem {
@@ -310,7 +312,9 @@ object DefaultCategories {
             icon = CategoryVisuals.getIcon(entity.iconKey),
             color = resolvedColor,
             dbId = entity.id,
-            iconKey = entity.iconKey
+            iconKey = entity.iconKey,
+            spendingTarget = entity.spendingTarget?.takeIf { it > 0.0 },
+            displayOrder = entity.displayOrder
         )
     }
 
@@ -324,7 +328,9 @@ object DefaultCategories {
             id = item.dbId,
             name = item.name,
             iconKey = item.iconKey,
-            colorHex = hex
+            colorHex = hex,
+            spendingTarget = item.spendingTarget?.takeIf { it > 0.0 },
+            displayOrder = item.displayOrder
         )
     }
 
