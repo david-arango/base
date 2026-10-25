@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -108,6 +107,8 @@ class QuickAddWidgetTest {
             listOf("Transport", "Dining Out", "Groceries"),
             snapshot.topCategories.map { it.name }
         )
+        assertEquals(2, snapshot.recentTransactions.size)
+        assertEquals("Groceries", snapshot.recentTransactions.first().title)
     }
 
     @Test
@@ -134,11 +135,29 @@ class QuickAddWidgetTest {
     }
 
     @Test
-    fun balanceQuickAddWidget_rendersBalanceEyeToggleAndResponsiveShortcuts() = runTest {
-        dao.insertOffsetTransaction(OffsetTransactionEntity(amount = 420.75))
+    fun balanceQuickAddWidget_rendersBalanceEyeToggleAndRecentTransactionsWhenExpanded() = runTest {
+        dao.insertOffsetTransaction(OffsetTransactionEntity(amount = 500.00))
+        dao.insertTransaction(
+            TransactionEntity(
+                title = "Morning Coffee",
+                category = "Dining Out",
+                amount = 6.25,
+                isExpense = true,
+                timestamp = System.currentTimeMillis() - 5000L
+            )
+        )
+        dao.insertTransaction(
+            TransactionEntity(
+                title = "Trader Joe's",
+                category = "Groceries",
+                amount = 73.00,
+                isExpense = true,
+                timestamp = System.currentTimeMillis()
+            )
+        )
         val snapshot = WidgetUpdateHelper.loadSnapshot(dao)
 
-        // 1. Compact 2x1 mode
+        // 1. Compact 1-row mode
         val compactOptions = Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 150)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 55)
@@ -162,12 +181,12 @@ class QuickAddWidgetTest {
         assertEquals(View.VISIBLE, addBtn.visibility)
         assertEquals(View.GONE, expandedSection.visibility)
 
-        // 2. Expanded 4x2 mode with masked balance
+        // 2. Expanded 2-row mode with masked balance and recent transactions
         WidgetUpdateHelper.toggleBalanceMask(dao)
         val maskedSnapshot = WidgetUpdateHelper.loadSnapshot(dao)
         val expandedOptions = Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 280)
-            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 130)
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 150)
         }
         val expandedRemoteViews = BalanceQuickAddWidgetProvider.buildRemoteViews(
             context = context,
@@ -178,16 +197,35 @@ class QuickAddWidgetTest {
         val expandedApplied = expandedRemoteViews.apply(context, parent)
         val maskedBalanceText = expandedApplied.findViewById<TextView>(R.id.widget_balance_amount)
         val expandedSectionNow = expandedApplied.findViewById<View>(R.id.widget_expanded_section)
-        val cat1Label = expandedApplied.findViewById<TextView>(R.id.widget_cat_label_1)
 
         assertEquals(WidgetUpdateHelper.MASKED_BALANCE_TEXT, maskedBalanceText.text.toString())
         assertEquals(View.VISIBLE, expandedSectionNow.visibility)
-        assertEquals("Groceries", cat1Label.text.toString())
+        assertEquals(View.VISIBLE, expandedApplied.findViewById<View>(R.id.widget_tx_row_1).visibility)
+        assertEquals("Trader Joe's", expandedApplied.findViewById<TextView>(R.id.widget_tx_title_1).text.toString())
+        assertEquals("-$73.00", expandedApplied.findViewById<TextView>(R.id.widget_tx_amount_1).text.toString())
+        assertEquals("Morning Coffee", expandedApplied.findViewById<TextView>(R.id.widget_tx_title_2).text.toString())
+        assertEquals("-$6.25", expandedApplied.findViewById<TextView>(R.id.widget_tx_amount_2).text.toString())
+
+        // Verify dynamic transaction count scales generously with available height
+        assertEquals(0, BalanceQuickAddWidgetProvider.computeMaxTransactionRows(60))
+        assertEquals(2, BalanceQuickAddWidgetProvider.computeMaxTransactionRows(110))
+        assertEquals(5, BalanceQuickAddWidgetProvider.computeMaxTransactionRows(150))
+        assertEquals(9, BalanceQuickAddWidgetProvider.computeMaxTransactionRows(210))
+        assertEquals(12, BalanceQuickAddWidgetProvider.computeMaxTransactionRows(300))
     }
 
     @Test
-    fun categoryShortcutsWidget_rendersTopCategoryIconsAndOptionalBalanceWithEyeToggle() = runTest {
-        dao.insertOffsetTransaction(OffsetTransactionEntity(amount = 910.00))
+    fun categoryShortcutsWidget_rendersIconsOnlyInOneRowAndIdenticalRecentTransactionsLayoutWhenExpanded() = runTest {
+        dao.insertOffsetTransaction(OffsetTransactionEntity(amount = 925.00))
+        dao.insertTransaction(
+            TransactionEntity(
+                title = "Subway Pass",
+                category = "Transport",
+                amount = 15.00,
+                isExpense = true,
+                timestamp = System.currentTimeMillis()
+            )
+        )
         dao.insertCategories(
             listOf(
                 CategoryEntity(id = 1, name = "Coffee", iconKey = "local_cafe", colorHex = 0xFFD35400L, displayOrder = 0),
@@ -198,7 +236,7 @@ class QuickAddWidgetTest {
         )
         val snapshot = WidgetUpdateHelper.loadSnapshot(dao)
 
-        // 1. Standard 4x1 row (no balance row shown)
+        // 1. Standard 1-row mode (icons only, ordered by displayOrder)
         val standardOptions = Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 60)
@@ -211,46 +249,88 @@ class QuickAddWidgetTest {
             snapshot = snapshot
         ).apply(context, parent)
 
-        assertEquals(View.GONE, standardViews.findViewById<View>(R.id.widget_shortcuts_balance_row).visibility)
         assertEquals(View.VISIBLE, standardViews.findViewById<View>(R.id.widget_add_btn).visibility)
-        assertEquals("Coffee", standardViews.findViewById<TextView>(R.id.widget_cat_label_1).text.toString())
-        assertEquals("Transit", standardViews.findViewById<TextView>(R.id.widget_cat_label_2).text.toString())
-        assertEquals("Groceries", standardViews.findViewById<TextView>(R.id.widget_cat_label_3).text.toString())
-        assertEquals("Health", standardViews.findViewById<TextView>(R.id.widget_cat_label_4).text.toString())
+        assertEquals("Coffee", standardViews.findViewById<View>(R.id.widget_cat_1).contentDescription.toString())
+        assertEquals("Transit", standardViews.findViewById<View>(R.id.widget_cat_2).contentDescription.toString())
+        assertEquals("Groceries", standardViews.findViewById<View>(R.id.widget_cat_3).contentDescription.toString())
+        assertEquals("Health", standardViews.findViewById<View>(R.id.widget_cat_4).contentDescription.toString())
 
-        // 2. Vertically expanded 4x2 mode (balance row shown -> must include eye toggle)
+        // 2. Vertically expanded 2+ rows mode -> identical to BalanceQuickAddWidgetProvider with recent transactions
         val tallOptions = Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 120)
         }
-        val tallViews = CategoryShortcutsWidgetProvider.buildRemoteViews(
+        val tallRemoteViews = CategoryShortcutsWidgetProvider.buildRemoteViews(
             context = context,
             appWidgetId = 2,
             options = tallOptions,
             snapshot = snapshot
-        ).apply(context, parent)
+        )
+        val balanceTallRemoteViews = BalanceQuickAddWidgetProvider.buildRemoteViews(
+            context = context,
+            appWidgetId = 2,
+            options = tallOptions,
+            snapshot = snapshot
+        )
+        assertEquals(balanceTallRemoteViews.layoutId, tallRemoteViews.layoutId)
 
-        assertEquals(View.VISIBLE, tallViews.findViewById<View>(R.id.widget_shortcuts_balance_row).visibility)
+        val tallViews = tallRemoteViews.apply(context, parent)
         assertEquals("$910.00", tallViews.findViewById<TextView>(R.id.widget_balance_amount).text.toString())
         assertEquals(View.VISIBLE, tallViews.findViewById<View>(R.id.widget_eye_toggle_btn).visibility)
+        assertEquals(View.VISIBLE, tallViews.findViewById<View>(R.id.widget_expanded_section).visibility)
+        assertEquals(View.VISIBLE, tallViews.findViewById<View>(R.id.widget_expanded_categories_row).visibility)
+        assertEquals("Coffee", tallViews.findViewById<View>(R.id.widget_cat_1).contentDescription.toString())
+        assertEquals("Transit", tallViews.findViewById<View>(R.id.widget_cat_2).contentDescription.toString())
+        assertEquals("Groceries", tallViews.findViewById<View>(R.id.widget_cat_3).contentDescription.toString())
+        assertEquals("Health", tallViews.findViewById<View>(R.id.widget_cat_4).contentDescription.toString())
+        assertEquals("Subway Pass", tallViews.findViewById<TextView>(R.id.widget_tx_title_1).text.toString())
+        assertEquals("-$15.00", tallViews.findViewById<TextView>(R.id.widget_tx_amount_1).text.toString())
+
+        // 3. Resized down to 1x1 mode (minWidth < 110dp) -> both widgets show ONLY the quick add button
+        val oneByOneOptions = Bundle().apply {
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 60)
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 60)
+        }
+        val balance1x1 = BalanceQuickAddWidgetProvider.buildRemoteViews(
+            context = context,
+            appWidgetId = 1,
+            options = oneByOneOptions,
+            snapshot = snapshot
+        ).apply(context, parent)
+        assertEquals(View.VISIBLE, balance1x1.findViewById<View>(R.id.widget_add_btn).visibility)
+        assertEquals(View.GONE, balance1x1.findViewById<View>(R.id.widget_add_btn_label).visibility)
+        assertEquals(View.GONE, balance1x1.findViewById<View>(R.id.widget_balance_container).visibility)
+        assertEquals(View.GONE, balance1x1.findViewById<View>(R.id.widget_expanded_section).visibility)
+
+        val shortcuts1x1 = CategoryShortcutsWidgetProvider.buildRemoteViews(
+            context = context,
+            appWidgetId = 2,
+            options = oneByOneOptions,
+            snapshot = snapshot
+        ).apply(context, parent)
+        assertEquals(View.VISIBLE, shortcuts1x1.findViewById<View>(R.id.widget_add_btn).visibility)
+        assertEquals(View.GONE, shortcuts1x1.findViewById<View>(R.id.widget_add_btn_label).visibility)
+        assertEquals(View.GONE, shortcuts1x1.findViewById<View>(R.id.widget_cat_1).visibility)
+        assertEquals(View.GONE, shortcuts1x1.findViewById<View>(R.id.widget_cat_2).visibility)
+        assertEquals(View.GONE, shortcuts1x1.findViewById<View>(R.id.widget_cat_3).visibility)
+        assertEquals(View.GONE, shortcuts1x1.findViewById<View>(R.id.widget_cat_4).visibility)
     }
 
     @Test
     fun widgetIconRenderer_rendersAllDefaultCategoryIconsToBitmaps() {
         for (cat in DefaultCategories.list) {
-            val bitmap = WidgetIconRenderer.renderCategoryBadgeBitmap(
+            val iconBitmap = WidgetIconRenderer.renderCategoryIconBitmap(
                 icon = cat.icon,
-                badgeColor = cat.color,
                 sizePx = 64
             )
-            assertNotNull(bitmap)
-            assertEquals(64, bitmap.width)
-            assertEquals(64, bitmap.height)
+            assertNotNull(iconBitmap)
+            assertEquals(64, iconBitmap.width)
+            assertEquals(64, iconBitmap.height)
         }
     }
 
     @Test
-    fun quickAddOverlayScreen_preselectsCategoryAndSavesOnKeyboardDone() {
+    fun quickAddOverlayScreen_reusesNewTransactionSheetAndPreselectsCategory() {
         var savedTitle = ""
         var savedCategory = ""
         var savedAmount = 0.0
@@ -264,7 +344,7 @@ class QuickAddWidgetTest {
                     initialCategoryName = "Transport",
                     initialIsExpense = true,
                     onDismiss = {},
-                    onSave = { title, category, amount, isExpense, note ->
+                    onSave = { title, category, amount, isExpense, note, _ ->
                         savedTitle = title
                         savedCategory = category
                         savedAmount = amount
@@ -277,17 +357,17 @@ class QuickAddWidgetTest {
         composeTestRule.waitForIdle()
 
         // Save button is disabled when amount is empty
-        composeTestRule.onNodeWithTag("quick_add_save_btn").assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("save_transaction_button").assertIsNotEnabled()
 
-        // Enter amount and trigger keyboard Done
-        composeTestRule.onNodeWithTag("quick_add_amount_input").performTextInput("18.50")
+        // Enter amount
+        composeTestRule.onNodeWithTag("display_amount_text").performTextInput("18.50")
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithTag("quick_add_save_btn").assertIsEnabled()
+        composeTestRule.onNodeWithTag("save_transaction_button").assertIsEnabled()
         composeTestRule.onNodeWithText("Save Transaction (-$18.50)").assertIsDisplayed()
 
-        // Trigger IME Done directly from the amount field
-        composeTestRule.onNodeWithTag("quick_add_amount_input").performImeAction()
+        // Trigger IME Done from the note field
+        composeTestRule.onNodeWithTag("note_input_field").performImeAction()
         composeTestRule.waitForIdle()
 
         assertEquals("Transport", savedTitle)
@@ -312,7 +392,7 @@ class QuickAddWidgetTest {
                     initialCategoryName = "Groceries",
                     initialIsExpense = true,
                     onDismiss = {},
-                    onSave = { title, category, amount, isExpense, note ->
+                    onSave = { title, category, amount, isExpense, note, _ ->
                         savedTitle = title
                         savedCategory = category
                         savedAmount = amount
@@ -325,16 +405,16 @@ class QuickAddWidgetTest {
         composeTestRule.waitForIdle()
 
         // Switch to Income
-        composeTestRule.onNodeWithTag("quick_add_toggle_income").performClick()
+        composeTestRule.onNodeWithTag("toggle_income_tab").performClick()
         // Select Dining Out chip
-        composeTestRule.onNodeWithTag("quick_add_cat_chip_dining").performClick()
+        composeTestRule.onNodeWithTag("cat_chip_dining").performClick()
         // Enter amount and note
-        composeTestRule.onNodeWithTag("quick_add_amount_input").performTextInput("45.00")
-        composeTestRule.onNodeWithTag("quick_add_note_input").performTextInput("Split dinner refund")
+        composeTestRule.onNodeWithTag("display_amount_text").performTextInput("45.00")
+        composeTestRule.onNodeWithTag("note_input_field").performTextInput("Split dinner refund")
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Save Transaction (+$45.00)").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("quick_add_save_btn").performClick()
+        composeTestRule.onNodeWithTag("save_transaction_button").performClick()
         composeTestRule.waitForIdle()
 
         assertEquals("Split dinner refund", savedTitle)

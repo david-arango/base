@@ -7,13 +7,16 @@ import android.content.Intent
 import com.arango.base.data.local.AppDatabase
 import com.arango.base.data.local.AppPreferenceEntity
 import com.arango.base.data.local.FinanceDao
+import com.arango.base.data.local.TransactionEntity
 import com.arango.base.data.model.CategoryItem
 import com.arango.base.data.model.DefaultCategories
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
@@ -22,7 +25,8 @@ data class WidgetDataSnapshot(
     val isBalanceMasked: Boolean,
     val formattedBalance: String,
     val periodSummaryText: String,
-    val topCategories: List<CategoryItem>
+    val topCategories: List<CategoryItem>,
+    val recentTransactions: List<TransactionEntity> = emptyList()
 )
 
 object WidgetUpdateHelper {
@@ -39,6 +43,23 @@ object WidgetUpdateHelper {
         val absVal = abs(balance)
         val formatted = String.format(Locale.US, "%,.2f", absVal)
         return if (balance < -0.004) "-$$formatted" else "$$formatted"
+    }
+
+    fun formatTransactionAmount(tx: TransactionEntity): String {
+        val formatted = String.format(Locale.US, "%,.2f", abs(tx.amount))
+        return if (tx.isExpense) "-$$formatted" else "+$$formatted"
+    }
+
+    fun formatTransactionDate(timestamp: Long, nowMillis: Long = System.currentTimeMillis()): String {
+        val nowCal = Calendar.getInstance().apply { timeInMillis = nowMillis }
+        val txCal = Calendar.getInstance().apply { timeInMillis = timestamp }
+        val isToday = nowCal.get(Calendar.YEAR) == txCal.get(Calendar.YEAR) &&
+            nowCal.get(Calendar.DAY_OF_YEAR) == txCal.get(Calendar.DAY_OF_YEAR)
+        return if (isToday) {
+            "Today"
+        } else {
+            SimpleDateFormat("MMM d", Locale.US).format(Date(timestamp))
+        }
     }
 
     suspend fun loadSnapshot(dao: FinanceDao): WidgetDataSnapshot {
@@ -94,7 +115,8 @@ object WidgetUpdateHelper {
             isBalanceMasked = isMasked,
             formattedBalance = formatRollingBalance(rollingBalance, isMasked),
             periodSummaryText = periodSummary,
-            topCategories = topCategories
+            topCategories = topCategories,
+            recentTransactions = transactions.take(12)
         )
     }
 
