@@ -11,6 +11,7 @@ import com.arango.base.data.local.TransactionEntity
 import com.arango.base.data.model.CategoryItem
 import com.arango.base.data.model.CategoryVisuals
 import com.arango.base.data.model.DefaultCategories
+import com.arango.base.widget.WidgetUpdateHelper
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -39,6 +40,13 @@ class FinanceRepository(
     val hasCompletedOnboarding: Flow<Boolean> = dao.getPreferenceFlow("has_completed_onboarding")
         .map { it == "true" }
 
+    private fun notifyWidgetsUpdated() {
+        try {
+            WidgetUpdateHelper.updateAllWidgetsAsync(context)
+        } catch (_: Exception) {
+        }
+    }
+
     suspend fun setCompletedOnboarding(completed: Boolean) {
         withContext(ioDispatcher) {
             dao.setPreference(AppPreferenceEntity("has_completed_onboarding", completed.toString()))
@@ -46,21 +54,26 @@ class FinanceRepository(
     }
 
     suspend fun insertTransaction(transaction: TransactionEntity): Long {
-        return dao.insertTransaction(transaction)
+        val id = dao.insertTransaction(transaction)
+        notifyWidgetsUpdated()
+        return id
     }
 
     suspend fun updateTransaction(transaction: TransactionEntity) {
         withContext(ioDispatcher) {
             dao.updateTransaction(transaction)
+            notifyWidgetsUpdated()
         }
     }
 
     suspend fun deleteTransaction(id: Long) {
         dao.deleteTransactionById(id)
+        notifyWidgetsUpdated()
     }
 
     suspend fun updateIncomeEngine(config: IncomeEngineEntity) {
         dao.setIncomeEngineConfig(config)
+        notifyWidgetsUpdated()
     }
 
     fun advancePayday(paydayTimestamp: Long, cadence: String): Long {
@@ -155,6 +168,10 @@ class FinanceRepository(
                 )
             }
 
+            if (triggeredTransactions.isNotEmpty()) {
+                notifyWidgetsUpdated()
+            }
+
             triggeredTransactions
         }
     }
@@ -183,30 +200,35 @@ class FinanceRepository(
         val id = dao.insertTransaction(newTx)
         val nextPayday = advancePayday(config.nextPaydayTimestamp, config.cadence)
         dao.setIncomeEngineConfig(config.copy(nextPaydayTimestamp = nextPayday, isActive = true))
+        notifyWidgetsUpdated()
         newTx.copy(id = id)
     }
 
     suspend fun addOffsetTransaction(amount: Double, note: String = "Balance adjustment"): Long {
         return withContext(ioDispatcher) {
-            dao.insertOffsetTransaction(
+            val id = dao.insertOffsetTransaction(
                 OffsetTransactionEntity(
                     amount = amount,
                     note = note.ifBlank { "Balance adjustment" },
                     timestamp = System.currentTimeMillis()
                 )
             )
+            notifyWidgetsUpdated()
+            id
         }
     }
 
     suspend fun deleteOffsetTransaction(id: Long) {
         withContext(ioDispatcher) {
             dao.deleteOffsetTransactionById(id)
+            notifyWidgetsUpdated()
         }
     }
 
     suspend fun clearAllOffsetTransactions() {
         withContext(ioDispatcher) {
             dao.clearAllOffsetTransactions()
+            notifyWidgetsUpdated()
         }
     }
 
@@ -224,6 +246,7 @@ class FinanceRepository(
             }
             dao.setPreference(AppPreferenceEntity("starting_balance_offset", offset.toString()))
             dao.setPreference(AppPreferenceEntity("migrated_starting_balance_to_offset", "true"))
+            notifyWidgetsUpdated()
         }
     }
 
@@ -259,7 +282,9 @@ class FinanceRepository(
             } else {
                 category
             }
-            dao.insertCategory(toInsert)
+            val id = dao.insertCategory(toInsert)
+            notifyWidgetsUpdated()
+            id
         }
     }
 
@@ -269,6 +294,7 @@ class FinanceRepository(
             if (oldName.isNotBlank() && oldName != category.name) {
                 dao.updateCategoryInTransactions(oldName, category.name)
             }
+            notifyWidgetsUpdated()
         }
     }
 
@@ -280,6 +306,7 @@ class FinanceRepository(
                     ?: DefaultCategories.toEntity(item).copy(displayOrder = index)
             }
             dao.updateCategories(updatedEntities)
+            notifyWidgetsUpdated()
         }
     }
 
@@ -306,6 +333,7 @@ class FinanceRepository(
                     )
                 )
             }
+            notifyWidgetsUpdated()
         }
     }
 
@@ -313,6 +341,7 @@ class FinanceRepository(
         withContext(ioDispatcher) {
             dao.deleteCategoryById(id)
             dao.reassignCategoryInTransactions(categoryName)
+            notifyWidgetsUpdated()
         }
     }
 
@@ -359,6 +388,7 @@ class FinanceRepository(
             }
             migrateStartingBalanceToOffsetIfNeeded()
             seedDefaultCategoriesIfEmpty()
+            notifyWidgetsUpdated()
         }
     }
 
@@ -379,6 +409,7 @@ class FinanceRepository(
                     isActive = false
                 )
             )
+            notifyWidgetsUpdated()
         }
     }
 
@@ -423,6 +454,7 @@ class FinanceRepository(
         }
 
         dao.insertTransactions(transactions)
+        notifyWidgetsUpdated()
         transactions.size
     }
 

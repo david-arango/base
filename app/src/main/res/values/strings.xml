@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Base</string>
+    <string name="widget_balance_name">Base: Balance &amp; Quick Add</string>
+    <string name="widget_balance_description">View your rolling balance with privacy masking and quickly log transactions.</string>
+    <string name="widget_shortcuts_name">Base: Category Quick Add</string>
+    <string name="widget_shortcuts_description">Log transactions in one tap using your top categories.</string>
 </resources>
