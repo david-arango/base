@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
@@ -51,6 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,7 +60,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -93,6 +98,9 @@ fun NewTransactionSheet(
     isOpen: Boolean,
     transactionToEdit: TransactionEntity? = null,
     categories: List<CategoryItem> = DefaultCategories.list,
+    initialCategory: String? = null,
+    initialIsExpense: Boolean = true,
+    autoFocusAmount: Boolean = false,
     onDismiss: () -> Unit,
     onSave: (title: String, category: String, amount: Double, isExpense: Boolean, note: String, timestamp: Long) -> Unit,
     onDelete: ((Long) -> Unit)? = null
@@ -101,7 +109,9 @@ fun NewTransactionSheet(
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    var isExpense by remember(transactionToEdit) { mutableStateOf(transactionToEdit?.isExpense ?: true) }
+    var isExpense by remember(transactionToEdit, initialIsExpense) {
+        mutableStateOf(transactionToEdit?.isExpense ?: initialIsExpense)
+    }
     var rawAmount by remember(transactionToEdit) {
         mutableStateOf(
             transactionToEdit?.let { tx ->
@@ -111,8 +121,16 @@ fun NewTransactionSheet(
             } ?: ""
         )
     }
-    var selectedCategory by remember(transactionToEdit, categories) {
-        mutableStateOf(transactionToEdit?.category ?: categories.firstOrNull()?.name ?: "Groceries")
+    val resolvedInitialCategory = remember(transactionToEdit, categories, initialCategory) {
+        transactionToEdit?.category
+            ?: initialCategory?.takeIf { it.isNotBlank() }?.let { requested ->
+                categories.firstOrNull { it.name.equals(requested, ignoreCase = true) }?.name ?: requested
+            }
+            ?: categories.firstOrNull()?.name
+            ?: "Groceries"
+    }
+    var selectedCategory by remember(resolvedInitialCategory) {
+        mutableStateOf(resolvedInitialCategory)
     }
     var noteText by remember(transactionToEdit) { mutableStateOf(transactionToEdit?.note ?: "") }
     var selectedTimestamp by remember(transactionToEdit) {
@@ -120,6 +138,18 @@ fun NewTransactionSheet(
     }
     var showDatePicker by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    val amountFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(autoFocusAmount) {
+        if (autoFocusAmount) {
+            try {
+                amountFocusRequester.requestFocus()
+                keyboardController?.show()
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     val formattedDate = remember(selectedTimestamp) {
         val nowCal = Calendar.getInstance()
@@ -264,64 +294,64 @@ fun NewTransactionSheet(
                     }
 
                     // Expense / Income Pill Switcher
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(9999.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .padding(3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Expense Button
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(9999.dp))
-                            .background(if (isExpense) CalmTerracotta else Color.Transparent)
-                            .clickable { isExpense = true }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                            .testTag("toggle_expense_tab"),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
+                        // Expense Button
+                        Row(
                             modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(if (isExpense) Color.White else CalmTerracotta)
-                        )
-                        Text(
-                            text = "Expense",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = if (isExpense) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                                .clip(RoundedCornerShape(9999.dp))
+                                .background(if (isExpense) CalmTerracotta else Color.Transparent)
+                                .clickable { isExpense = true }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .testTag("toggle_expense_tab"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isExpense) Color.White else CalmTerracotta)
+                            )
+                            Text(
+                                text = "Expense",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = if (isExpense) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
 
-                    // Income Button
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(9999.dp))
-                            .background(if (!isExpense) CalmPositiveDeep else Color.Transparent)
-                            .clickable { isExpense = false }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                            .testTag("toggle_income_tab"),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Box(
+                        // Income Button
+                        Row(
                             modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(if (!isExpense) Color.White else CalmPositiveDeep)
-                        )
-                        Text(
-                            text = "Income",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = if (!isExpense) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                                .clip(RoundedCornerShape(9999.dp))
+                                .background(if (!isExpense) CalmPositiveDeep else Color.Transparent)
+                                .clickable { isExpense = false }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .testTag("toggle_income_tab"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(if (!isExpense) Color.White else CalmPositiveDeep)
+                            )
+                            Text(
+                                text = "Income",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = if (!isExpense) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
-        }
 
             HorizontalDivider(
                 thickness = 1.dp,
@@ -430,6 +460,7 @@ fun NewTransactionSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
+                        .focusRequester(amountFocusRequester)
                         .testTag("display_amount_text")
                 )
 
@@ -523,6 +554,21 @@ fun NewTransactionSheet(
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                val amt = rawAmount.toDoubleOrNull() ?: 0.0
+                                if (amt > 0.0) {
+                                    onSave(
+                                        noteText.ifBlank { selectedCategory },
+                                        selectedCategory,
+                                        amt,
+                                        isExpense,
+                                        noteText,
+                                        selectedTimestamp
+                                    )
+                                }
+                            }
                         ),
                         modifier = Modifier
                             .weight(1f)

@@ -22,6 +22,44 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".widget.QuickAddActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="Quick Add"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Base.QuickAddOverlay"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize" />
+
+        <receiver
+            android:name=".widget.BalanceQuickAddWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_balance_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.arango.base.widget.ACTION_TOGGLE_BALANCE_MASK" />
+                <action android:name="com.arango.base.widget.ACTION_REFRESH_WIDGETS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/balance_quick_add_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.CategoryShortcutsWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_shortcuts_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.arango.base.widget.ACTION_TOGGLE_BALANCE_MASK" />
+                <action android:name="com.arango.base.widget.ACTION_REFRESH_WIDGETS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/category_shortcuts_widget_info" />
+        </receiver>
     </application>
 
 </manifest>
