@@ -417,10 +417,10 @@ class QuickAddWidgetTest {
         composeTestRule.onNodeWithTag("save_transaction_button").performClick()
         composeTestRule.waitForIdle()
 
-        assertEquals("Split dinner refund", savedTitle)
+        assertEquals("Split Dinner Refund", savedTitle)
         assertEquals("Dining Out", savedCategory)
         assertEquals(45.00, savedAmount, 0.001)
         assertFalse(savedIsExpense)
-        assertEquals("Split dinner refund", savedNote)
+        assertEquals("Split Dinner Refund", savedNote)
     }
 }

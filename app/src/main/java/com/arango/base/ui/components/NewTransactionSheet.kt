@@ -67,6 +67,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -534,7 +535,7 @@ fun NewTransactionSheet(
 
                     TextField(
                         value = noteText,
-                        onValueChange = { noteText = it },
+                        onValueChange = { noteText = capitalizeWords(it) },
                         placeholder = {
                             Text(
                                 "Add a note (optional)...",
@@ -552,6 +553,7 @@ fun NewTransactionSheet(
                         ),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Words,
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Done
                         ),
@@ -694,6 +696,20 @@ fun NewTransactionSheet(
             }
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+}
+
+internal fun capitalizeWords(text: String): String {
+    if (text.isEmpty()) return text
+    return buildString(text.length) {
+        for (i in text.indices) {
+            val ch = text[i]
+            if (i == 0 || text[i - 1].isWhitespace()) {
+                append(ch.titlecaseChar())
+            } else {
+                append(ch)
+            }
         }
     }
 }
