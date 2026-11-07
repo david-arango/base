@@ -393,6 +393,7 @@ class FinanceAppComposeTest {
 
     @Test
     fun newTransactionSheet_textInputHandling() {
+        var savedTitle: String? = null
         var savedAmount: Double? = null
         var savedNote: String? = null
 
@@ -401,7 +402,8 @@ class FinanceAppComposeTest {
                 NewTransactionSheet(
                     isOpen = true,
                     onDismiss = {},
-                    onSave = { _, _, amount, _, note, _ ->
+                    onSave = { title, _, amount, _, note, _ ->
+                        savedTitle = title
                         savedAmount = amount
                         savedNote = note
                     }
@@ -410,16 +412,19 @@ class FinanceAppComposeTest {
         }
         composeTestRule.waitForIdle()
 
-        // Enter amount and note using native text fields
+        // Enter amount and lowercase multi-word note to verify every word is auto-capitalized
         composeTestRule.onNodeWithTag("display_amount_text").performTextInput("42.50")
-        composeTestRule.onNodeWithTag("note_input_field").performTextInput("Coffee run")
+        composeTestRule.onNodeWithTag("note_input_field").performTextInput("coffee run with friends")
         composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("note_input_field").assertTextContains("Coffee Run With Friends")
 
         composeTestRule.onNodeWithTag("save_transaction_button").performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(42.50, savedAmount!!, 0.001)
-        assertEquals("Coffee run", savedNote)
+        assertEquals("Coffee Run With Friends", savedNote)
+        assertEquals("Coffee Run With Friends", savedTitle)
     }
 
     @Test
