@@ -408,9 +408,10 @@ class QuickAddWidgetTest {
         composeTestRule.onNodeWithTag("toggle_income_tab").performClick()
         // Select Dining Out chip
         composeTestRule.onNodeWithTag("cat_chip_dining").performClick()
-        // Enter amount and note
+        // Enter amount, title, and note
         composeTestRule.onNodeWithTag("display_amount_text").performTextInput("45.00")
-        composeTestRule.onNodeWithTag("note_input_field").performTextInput("Split dinner refund")
+        composeTestRule.onNodeWithTag("title_input_field").performTextInput("Split dinner refund")
+        composeTestRule.onNodeWithTag("note_input_field").performTextInput("From Alex")
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Save Transaction (+$45.00)").assertIsDisplayed()
@@ -421,6 +422,6 @@ class QuickAddWidgetTest {
         assertEquals("Dining Out", savedCategory)
         assertEquals(45.00, savedAmount, 0.001)
         assertFalse(savedIsExpense)
-        assertEquals("Split Dinner Refund", savedNote)
+        assertEquals("From Alex", savedNote)
     }
 }

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Title
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -132,6 +133,13 @@ fun NewTransactionSheet(
     }
     var selectedCategory by remember(resolvedInitialCategory) {
         mutableStateOf(resolvedInitialCategory)
+    }
+    var titleText by remember(transactionToEdit) {
+        mutableStateOf(
+            transactionToEdit?.title?.takeUnless {
+                it.equals(transactionToEdit.category, ignoreCase = true)
+            } ?: ""
+        )
     }
     var noteText by remember(transactionToEdit) { mutableStateOf(transactionToEdit?.note ?: "") }
     var selectedTimestamp by remember(transactionToEdit) {
@@ -515,14 +523,91 @@ fun NewTransactionSheet(
                     }
                 }
 
+                // Optional Title Field
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp, bottom = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(horizontal = 12.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Title,
+                        contentDescription = "Title",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    TextField(
+                        value = titleText,
+                        onValueChange = { titleText = capitalizeWords(it) },
+                        placeholder = {
+                            Text(
+                                "Title (optional)...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Words,
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                val amt = rawAmount.toDoubleOrNull() ?: 0.0
+                                if (amt > 0.0) {
+                                    onSave(
+                                        titleText.ifBlank { selectedCategory },
+                                        selectedCategory,
+                                        amt,
+                                        isExpense,
+                                        noteText,
+                                        selectedTimestamp
+                                    )
+                                }
+                            }
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("title_input_field")
+                    )
+
+                    if (titleText.isNotEmpty()) {
+                        IconButton(
+                            onClick = { titleText = "" },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Cancel,
+                                contentDescription = "Clear title",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+
                 // Optional Quick Note Field
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp, bottom = 8.dp)
+                        .padding(top = 4.dp, bottom = 8.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -535,7 +620,7 @@ fun NewTransactionSheet(
 
                     TextField(
                         value = noteText,
-                        onValueChange = { noteText = capitalizeWords(it) },
+                        onValueChange = { noteText = it },
                         placeholder = {
                             Text(
                                 "Add a note (optional)...",
@@ -553,7 +638,7 @@ fun NewTransactionSheet(
                         ),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Words,
+                            capitalization = KeyboardCapitalization.Sentences,
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Done
                         ),
@@ -562,7 +647,7 @@ fun NewTransactionSheet(
                                 val amt = rawAmount.toDoubleOrNull() ?: 0.0
                                 if (amt > 0.0) {
                                     onSave(
-                                        noteText.ifBlank { selectedCategory },
+                                        titleText.ifBlank { selectedCategory },
                                         selectedCategory,
                                         amt,
                                         isExpense,
@@ -599,7 +684,7 @@ fun NewTransactionSheet(
                     onClick = {
                         if (parsedAmount > 0) {
                             onSave(
-                                noteText.ifBlank { selectedCategory },
+                                titleText.ifBlank { selectedCategory },
                                 selectedCategory,
                                 parsedAmount,
                                 isExpense,

@@ -565,4 +565,72 @@ class FinanceRepositoryTest {
         repository.setCompletedOnboarding(false)
         assertFalse(repository.hasCompletedOnboarding.first())
     }
+
+    @Test
+    fun migrateLegacyNotesToTitles_movesNotesToTitleAndClearsNotesOnce() = runBlocking {
+        // Simulate pre-existing transactions before the Title/Note split update:
+        // 1. User typed "Morning Coffee" into the old note field -> title="Morning Coffee", note="Morning Coffee"
+        val id1 = repository.insertTransaction(
+            TransactionEntity(
+                title = "Morning Coffee",
+                category = "Dining Out",
+                amount = 5.25,
+                isExpense = true,
+                timestamp = 1000L,
+                note = "Morning Coffee"
+            )
+        )
+        // 2. Transaction where note held the displayed value while title had category name
+        val id2 = repository.insertTransaction(
+            TransactionEntity(
+                title = "Groceries",
+                category = "Groceries",
+                amount = 42.00,
+                isExpense = true,
+                timestamp = 2000L,
+                note = "Trader Joe's Run"
+            )
+        )
+        // 3. Transaction where user left the old note field blank
+        val id3 = repository.insertTransaction(
+            TransactionEntity(
+                title = "Transport",
+                category = "Transport",
+                amount = 15.00,
+                isExpense = true,
+                timestamp = 3000L,
+                note = ""
+            )
+        )
+
+        // Run startup migration
+        repository.checkAndSeedInitialData()
+
+        val migrated = repository.allTransactions.first().associateBy { it.id }
+        assertEquals("Morning Coffee", migrated[id1]!!.title)
+        assertEquals("", migrated[id1]!!.note)
+
+        assertEquals("Trader Joe's Run", migrated[id2]!!.title)
+        assertEquals("", migrated[id2]!!.note)
+
+        assertEquals("Transport", migrated[id3]!!.title)
+        assertEquals("", migrated[id3]!!.note)
+
+        // Subsequent transactions with a new optional note must NOT have their note cleared on next launch
+        val id4 = repository.insertTransaction(
+            TransactionEntity(
+                title = "Dinner Out",
+                category = "Dining Out",
+                amount = 60.00,
+                isExpense = true,
+                timestamp = 4000L,
+                note = "Anniversary dinner"
+            )
+        )
+        repository.checkAndSeedInitialData()
+
+        val afterSecondCheck = repository.allTransactions.first().associateBy { it.id }
+        assertEquals("Dinner Out", afterSecondCheck[id4]!!.title)
+        assertEquals("Anniversary dinner", afterSecondCheck[id4]!!.note)
+    }
 }
