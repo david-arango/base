@@ -273,6 +273,16 @@ class FinanceRepository(
         }
     }
 
+    suspend fun migrateLegacyNotesToTitlesIfNeeded() {
+        withContext(ioDispatcher) {
+            val migrated = dao.getPreference("migrated_legacy_notes_to_titles")
+            if (migrated != "true") {
+                dao.migrateLegacyTransactionNotesToTitles()
+                dao.setPreference(AppPreferenceEntity("migrated_legacy_notes_to_titles", "true"))
+            }
+        }
+    }
+
     suspend fun insertCategory(category: CategoryEntity): Long {
         return withContext(ioDispatcher) {
             val existing = dao.getAllCategoriesList()
@@ -387,6 +397,7 @@ class FinanceRepository(
                 dao.updateDirectDepNotesToPaycheck()
             }
             migrateStartingBalanceToOffsetIfNeeded()
+            migrateLegacyNotesToTitlesIfNeeded()
             seedDefaultCategoriesIfEmpty()
             notifyWidgetsUpdated()
         }
@@ -398,6 +409,7 @@ class FinanceRepository(
             dao.clearAllOffsetTransactions()
             dao.setPreference(AppPreferenceEntity("starting_balance_offset", "0.0"))
             dao.setPreference(AppPreferenceEntity("migrated_starting_balance_to_offset", "true"))
+            dao.setPreference(AppPreferenceEntity("migrated_legacy_notes_to_titles", "true"))
             dao.setPreference(AppPreferenceEntity("has_seeded_initial_data", "true"))
             dao.setPreference(AppPreferenceEntity("has_completed_onboarding", "true"))
             dao.setIncomeEngineConfig(

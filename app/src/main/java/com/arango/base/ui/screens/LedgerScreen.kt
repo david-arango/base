@@ -466,11 +466,9 @@ fun TransactionItemRow(
     val isExpense = transaction.isExpense
     val isIncomeHighlight = !isExpense && transaction.isAuto
 
-    val hasNote = transaction.note.isNotBlank() || (transaction.title.isNotBlank() && !transaction.title.equals(transaction.category, ignoreCase = true))
-    val entryTitle = if (transaction.note.isNotBlank()) {
-        transaction.note
-    } else if (transaction.title.isNotBlank() && !transaction.title.equals(transaction.category, ignoreCase = true)) {
-        transaction.title
+    val entryTitle = transaction.title.ifBlank { transaction.category }
+    val subtitleText = if (transaction.note.isNotBlank()) {
+        "${transaction.category} • ${transaction.note}"
     } else {
         transaction.category
     }
@@ -538,7 +536,7 @@ fun TransactionItemRow(
                 }
 
                 Text(
-                    text = transaction.category,
+                    text = subtitleText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

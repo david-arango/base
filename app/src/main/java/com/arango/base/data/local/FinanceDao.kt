@@ -87,6 +87,19 @@ interface FinanceDao {
     @Query("UPDATE transactions SET note = 'Paycheck' WHERE isAuto = 1 AND (note = 'Direct Dep' OR note = 'Direct deposit')")
     suspend fun updateDirectDepNotesToPaycheck()
 
+    @Query(
+        """
+        UPDATE transactions
+        SET title = CASE
+            WHEN TRIM(note) != '' THEN note
+            WHEN TRIM(title) != '' THEN title
+            ELSE category
+        END,
+        note = ''
+        """
+    )
+    suspend fun migrateLegacyTransactionNotesToTitles()
+
     // Offset Transactions (Invisible balance adjustments)
     @Query("SELECT * FROM offset_transactions ORDER BY timestamp DESC")
     fun getAllOffsetTransactions(): Flow<List<OffsetTransactionEntity>>

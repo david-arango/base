@@ -412,19 +412,21 @@ class FinanceAppComposeTest {
         }
         composeTestRule.waitForIdle()
 
-        // Enter amount and lowercase multi-word note to verify every word is auto-capitalized
+        // Enter amount, lowercase multi-word title (auto-capitalized), and optional note
         composeTestRule.onNodeWithTag("display_amount_text").performTextInput("42.50")
-        composeTestRule.onNodeWithTag("note_input_field").performTextInput("coffee run with friends")
+        composeTestRule.onNodeWithTag("title_input_field").performTextInput("coffee run with friends")
+        composeTestRule.onNodeWithTag("note_input_field").performTextInput("Oat milk lattes")
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithTag("note_input_field").assertTextContains("Coffee Run With Friends")
+        composeTestRule.onNodeWithTag("title_input_field").assertTextContains("Coffee Run With Friends")
+        composeTestRule.onNodeWithTag("note_input_field").assertTextContains("Oat milk lattes")
 
         composeTestRule.onNodeWithTag("save_transaction_button").performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(42.50, savedAmount!!, 0.001)
-        assertEquals("Coffee Run With Friends", savedNote)
         assertEquals("Coffee Run With Friends", savedTitle)
+        assertEquals("Oat milk lattes", savedNote)
     }
 
     @Test
@@ -481,6 +483,7 @@ class FinanceAppComposeTest {
         composeTestRule.onNodeWithTag("save_transaction_button").performClick()
         composeTestRule.waitForIdle()
 
+        assertEquals("Whole Foods Market", savedTitle)
         assertEquals("Weekly organic groceries", savedNote)
         assertEquals(true, savedIsExpense)
         assertTrue(savedAmount != null && savedAmount!! > 0)
@@ -567,8 +570,10 @@ class FinanceAppComposeTest {
         }
         composeTestRule.waitForIdle()
 
-        // Verify transaction row is displayed
+        // Verify transaction row is displayed with Title and "Category • Note"
         composeTestRule.onNodeWithTag("transaction_row_101").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Dinner with Team").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Dining Out • Team dinner").assertIsDisplayed()
 
         // Tap on the row to trigger edit
         composeTestRule.onNodeWithTag("transaction_row_101").performClick()
